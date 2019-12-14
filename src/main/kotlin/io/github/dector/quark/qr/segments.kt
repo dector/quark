@@ -29,7 +29,6 @@ package io.github.dector.quark.qr
 
 import io.nayuki.qrcodegen.BitBuffer
 import io.nayuki.qrcodegen.QrCode
-import io.nayuki.qrcodegen.QrSegment
 import java.nio.charset.StandardCharsets
 import java.util.regex.Pattern
 import kotlin.math.min

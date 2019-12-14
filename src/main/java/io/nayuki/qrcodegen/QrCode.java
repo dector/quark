@@ -25,6 +25,7 @@ package io.nayuki.qrcodegen;
 
 import io.github.dector.quark.qr.ErrorCorrectionKt;
 import io.github.dector.quark.qr.ErrorCorrectionLevel;
+import io.github.dector.quark.qr.QrSegment;
 import java.awt.image.BufferedImage;
 import java.util.Arrays;
 import java.util.List;

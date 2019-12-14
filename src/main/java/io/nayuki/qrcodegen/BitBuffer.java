@@ -23,6 +23,7 @@
 
 package io.nayuki.qrcodegen;
 
+import io.github.dector.quark.qr.QrSegment;
 import java.util.BitSet;
 import java.util.Objects;
 

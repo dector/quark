@@ -32,7 +32,6 @@ import io.github.dector.quark.qr.Constants.NUM_ERROR_CORRECTION_BLOCKS
 import io.nayuki.qrcodegen.BitBuffer
 import io.nayuki.qrcodegen.DataTooLongException
 import io.nayuki.qrcodegen.QrCode
-import io.nayuki.qrcodegen.QrSegment
 import kotlin.math.min
 
 /**
@@ -109,7 +108,7 @@ fun encodeSegments(segments: List<QrSegment>, correctionLevel: ErrorCorrectionLe
         segments.forEach { segment ->
             appendBits(segment.mode.modeBits, 4)
             appendBits(segment.numChars, segment.mode.numCharCountBits(version))
-            appendData(segment.data)
+            appendData(segment.copyData())
         }
     }
     assert(bb.bitLength() == dataUsedBits)
@@ -210,7 +209,7 @@ fun getTotalBits(segments: List<QrSegment>, version: Int): Int {
 
         if (seg.numChars >= 1 shl ccbits) return -1 // The segment's length doesn't fit the field's bit width
 
-        result += 4L + ccbits + seg.data.bitLength()
+        result += 4L + ccbits + seg.copyData().bitLength()
 
         if (result > Int.MAX_VALUE) return -1 // The sum will overflow an int type
     }
