@@ -1,5 +1,6 @@
 package io.github.dector.quark
 
+import io.github.dector.quark.exporters.ascii.toAscii
 import io.github.dector.quark.exporters.image.ImageExporter
 import io.github.dector.quark.qr.ErrorCorrectionLevel
 import io.github.dector.quark.qr.QrEncoder
@@ -16,6 +17,8 @@ fun main() {
         "png",
         file
     )
+
+    println(qrCode.toAscii())
 
     val areFilesEquals = File("out/__qr_code.png").readBytes().contentEquals(file.readBytes())
     if (areFilesEquals) println("Files are equals")
