@@ -9,9 +9,14 @@ import javax.imageio.ImageIO
 fun main() {
     val qrCode = QrEncoder.encodeText("https://kotlinlang.org", QrCode.Ecc.LOW)
 
+    val file = File("out/qr_code.png").also { it.parentFile.mkdirs() }
     ImageIO.write(
         qrCode.toImage(16, 4),
         "png",
-        File("out/qr_code.png").also { it.parentFile.mkdirs() }
+        file
     )
+
+    val areFilesEquals = File("out/__qr_code.png").readBytes().contentEquals(file.readBytes())
+    if (areFilesEquals) println("Files are equals")
+    else System.err.println("!!! FILES ARE NOT EQUALS !!!")
 }
