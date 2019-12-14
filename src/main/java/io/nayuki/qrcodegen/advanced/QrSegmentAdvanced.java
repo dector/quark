@@ -25,7 +25,9 @@
 package io.nayuki.qrcodegen.advanced;
 
 import io.github.dector.quark.qr.BitBuffer;
-import io.nayuki.qrcodegen.DataTooLongException;
+import io.github.dector.quark.qr.DataTooLongException;
+import io.github.dector.quark.qr.ErrorCorrectionLevel;
+import io.github.dector.quark.qr.QrConstants;
 import io.nayuki.qrcodegen.QrCode;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -34,6 +36,8 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
 import io.nayuki.qrcodegen.advanced.QrSegment.Mode;
+
+import static io.github.dector.quark.qr.SegmentsEncodingKt.getNumDataCodewords;
 
 
 /**
@@ -64,11 +68,11 @@ public final class QrSegmentAdvanced {
      * @throws IllegalArgumentException if 1 &#x2264; minVersion &#x2264; maxVersion &#x2264; 40 is violated
      * @throws DataTooLongException if the text fails to fit in the maxVersion QR Code at the ECL
      */
-    public static List<QrSegment> makeSegmentsOptimally(String text, QrCode.Ecc ecl, int minVersion, int maxVersion) {
+    public static List<QrSegment> makeSegmentsOptimally(String text, ErrorCorrectionLevel ecl, int minVersion, int maxVersion) {
         // Check arguments
         Objects.requireNonNull(text);
         Objects.requireNonNull(ecl);
-        if (!(QrCode.MIN_VERSION <= minVersion && minVersion <= maxVersion && maxVersion <= QrCode.MAX_VERSION))
+        if (!(QrConstants.MIN_VERSION <= minVersion && minVersion <= maxVersion && maxVersion <= QrConstants.MAX_VERSION))
             throw new IllegalArgumentException("Invalid value");
 
         // Iterate through version numbers, and make tentative segments
@@ -77,10 +81,9 @@ public final class QrSegmentAdvanced {
         for (int version = minVersion; ; version++) {
             if (version == minVersion || version == 10 || version == 27)
                 segs = makeSegmentsOptimally(codePoints, version);
-            assert segs != null;
 
             // Check if the segments fit
-            int dataCapacityBits = QrCode.getNumDataCodewords(version, ecl) * 8;
+            int dataCapacityBits = getNumDataCodewords(version, ecl) * 8;
             int dataUsedBits = QrSegment.getTotalBits(segs, version);
             if (dataUsedBits != -1 && dataUsedBits <= dataCapacityBits)
                 return segs;  // This version number is found to be suitable

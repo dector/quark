@@ -24,6 +24,7 @@
 package io.nayuki.qrcodegen.advanced;
 
 import io.github.dector.quark.qr.BitBuffer;
+import io.github.dector.quark.qr.QrConstants;
 import io.nayuki.qrcodegen.QrCode;
 import java.util.List;
 import java.util.Objects;
@@ -264,7 +265,7 @@ public final class QrSegment {
         // Returns the bit width of the character count field for a segment in this mode
         // in a QR Code at the given version number. The result is in the range [0, 16].
         public int numCharCountBits(int ver) {
-            assert QrCode.MIN_VERSION <= ver && ver <= QrCode.MAX_VERSION;
+            assert QrConstants.MIN_VERSION <= ver && ver <= QrConstants.MAX_VERSION;
             return numBitsCharCount[(ver + 7) / 17];
         }
 

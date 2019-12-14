@@ -27,7 +27,6 @@
 
 package io.github.dector.quark.qr
 
-import io.nayuki.qrcodegen.QrCode
 import java.util.BitSet
 import java.util.Objects
 
@@ -79,7 +78,7 @@ class BitBuffer(
         var i = len - 1
         while (i >= 0) {
             // Append bit by bit
-            data[bitLength] = QrCode.getBit(value, i)
+            data[bitLength] = getBit(value, i)
             i--
             bitLength++
         }

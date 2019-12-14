@@ -46,7 +46,7 @@ enum class SegmentMode(val modeBits: Int, private vararg val numBitsCharCount: I
     // Returns the bit width of the character count field for a segment in this mode
     // in a QR Code at the given version number. The result is in the range [0, 16].
     fun numCharCountBits(version: Int): Int {
-        require(version in QrCode.MIN_VERSION..QrCode.MAX_VERSION)
+        require(version in QrConstants.MIN_VERSION..QrConstants.MAX_VERSION)
 
         return numBitsCharCount[(version + 7) / 17]
     }

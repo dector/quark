@@ -27,7 +27,6 @@
 
 package io.github.dector.quark.qr
 
-import io.nayuki.qrcodegen.DataTooLongException
 import io.nayuki.qrcodegen.QrCode
 
 // TODO Used as an intermediate entity for extension-based API design. All extensions should be implemented on top of `QrCode.Companion`.

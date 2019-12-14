@@ -23,14 +23,27 @@
 
 package io.nayuki.qrcodegen;
 
-import io.github.dector.quark.qr.ErrorCorrectionKt;
+import io.github.dector.quark.qr.Constants;
 import io.github.dector.quark.qr.ErrorCorrectionLevel;
+import io.github.dector.quark.qr.OtherKt;
 import io.github.dector.quark.qr.QrSegment;
 import java.awt.image.BufferedImage;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import org.jetbrains.annotations.NotNull;
+
+import static io.github.dector.quark.qr.OtherKt.finderPenaltyAddHistory;
+import static io.github.dector.quark.qr.OtherKt.reedSolomonComputeDivisor;
+import static io.github.dector.quark.qr.OtherKt.reedSolomonComputeRemainder;
+import static io.github.dector.quark.qr.QrConstants.MAX_VERSION;
+import static io.github.dector.quark.qr.QrConstants.MIN_VERSION;
+import static io.github.dector.quark.qr.QrConstants.PENALTY_N1;
+import static io.github.dector.quark.qr.QrConstants.PENALTY_N2;
+import static io.github.dector.quark.qr.QrConstants.PENALTY_N3;
+import static io.github.dector.quark.qr.QrConstants.PENALTY_N4;
+import static io.github.dector.quark.qr.SegmentsEncodingKt.getNumDataCodewords;
+import static io.github.dector.quark.qr.SegmentsEncodingKt.getNumRawDataModules;
 
 
 /**
@@ -113,7 +126,7 @@ public final class QrCode {
      * @throws IllegalArgumentException if the version or mask value is out of range,
      *                                  or if the data is the wrong length for the specified version and error correction level
      */
-    public QrCode(int ver, Ecc ecl, byte[] dataCodewords, int msk) {
+    public QrCode(int ver, ErrorCorrectionLevel ecl, byte[] dataCodewords, int msk) {
         // Check arguments and initialize fields
         if (ver < MIN_VERSION || ver > MAX_VERSION)
             throw new IllegalArgumentException("Version value out of range");
@@ -121,7 +134,7 @@ public final class QrCode {
             throw new IllegalArgumentException("Mask value out of range");
         version = ver;
         size = ver * 4 + 17;
-        errorCorrectionLevel = ErrorCorrectionKt.neww(Objects.requireNonNull(ecl));
+        errorCorrectionLevel = Objects.requireNonNull(ecl);
         Objects.requireNonNull(dataCodewords);
         modules = new boolean[size][size];  // Initially all white
         isFunction = new boolean[size][size];
@@ -263,18 +276,18 @@ public final class QrCode {
 
         // Draw first copy
         for (int i = 0; i <= 5; i++)
-            setFunctionModule(8, i, getBit(bits, i));
-        setFunctionModule(8, 7, getBit(bits, 6));
-        setFunctionModule(8, 8, getBit(bits, 7));
-        setFunctionModule(7, 8, getBit(bits, 8));
+            setFunctionModule(8, i, OtherKt.getBit(bits, i));
+        setFunctionModule(8, 7, OtherKt.getBit(bits, 6));
+        setFunctionModule(8, 8, OtherKt.getBit(bits, 7));
+        setFunctionModule(7, 8, OtherKt.getBit(bits, 8));
         for (int i = 9; i < 15; i++)
-            setFunctionModule(14 - i, 8, getBit(bits, i));
+            setFunctionModule(14 - i, 8, OtherKt.getBit(bits, i));
 
         // Draw second copy
         for (int i = 0; i < 8; i++)
-            setFunctionModule(size - 1 - i, 8, getBit(bits, i));
+            setFunctionModule(size - 1 - i, 8, OtherKt.getBit(bits, i));
         for (int i = 8; i < 15; i++)
-            setFunctionModule(8, size - 15 + i, getBit(bits, i));
+            setFunctionModule(8, size - 15 + i, OtherKt.getBit(bits, i));
         setFunctionModule(8, size - 8, true);  // Always black
     }
 
@@ -294,7 +307,7 @@ public final class QrCode {
 
         // Draw two copies
         for (int i = 0; i < 18; i++) {
-            boolean bit = getBit(bits, i);
+            boolean bit = OtherKt.getBit(bits, i);
             int a = size - 11 + i % 3;
             int b = i / 3;
             setFunctionModule(a, b, bit);
@@ -341,12 +354,12 @@ public final class QrCode {
     // codewords appended to it, based on this object's version and error correction level.
     private byte[] addEccAndInterleave(byte[] data) {
         Objects.requireNonNull(data);
-        if (data.length != getNumDataCodewords(version, ErrorCorrectionKt.old(errorCorrectionLevel)))
+        if (data.length != getNumDataCodewords(version, errorCorrectionLevel))
             throw new IllegalArgumentException();
 
         // Calculate parameter numbers
-        int numBlocks = NUM_ERROR_CORRECTION_BLOCKS[errorCorrectionLevel.ordinal()][version];
-        int blockEccLen = ECC_CODEWORDS_PER_BLOCK[errorCorrectionLevel.ordinal()][version];
+        int numBlocks = Constants.NUM_ERROR_CORRECTION_BLOCKS[errorCorrectionLevel.ordinal()][version];
+        int blockEccLen = Constants.ECC_CODEWORDS_PER_BLOCK[errorCorrectionLevel.ordinal()][version];
         int rawCodewords = getNumRawDataModules(version) / 8;
         int numShortBlocks = numBlocks - rawCodewords % numBlocks;
         int shortBlockLen = rawCodewords / numBlocks;
@@ -396,7 +409,7 @@ public final class QrCode {
                     boolean upward = ((right + 1) & 2) == 0;
                     int y = upward ? size - 1 - vert : vert;  // Actual y coordinate
                     if (!isFunction[y][x] && i < data.length * 8) {
-                        modules[y][x] = getBit(data[i >>> 3], 7 - (i & 7));
+                        modules[y][x] = OtherKt.getBit(data[i >>> 3], 7 - (i & 7));
                         i++;
                     }
                     // If this QR Code has any remainder bits (0 to 7), they were assigned as
@@ -583,101 +596,6 @@ public final class QrCode {
         }
     }
 
-
-    // Returns the number of data bits that can be stored in a QR Code of the given version number, after
-    // all function modules are excluded. This includes remainder bits, so it might not be a multiple of 8.
-    // The result is in the range [208, 29648]. This could be implemented as a 40-entry lookup table.
-    private static int getNumRawDataModules(int ver) {
-        if (ver < MIN_VERSION || ver > MAX_VERSION)
-            throw new IllegalArgumentException("Version number out of range");
-
-        int size = ver * 4 + 17;
-        int result = size * size;   // Number of modules in the whole QR Code square
-        result -= 8 * 8 * 3;        // Subtract the three finders with separators
-        result -= 15 * 2 + 1;       // Subtract the format information and black module
-        result -= (size - 16) * 2;  // Subtract the timing patterns (excluding finders)
-        // The five lines above are equivalent to: int result = (16 * ver + 128) * ver + 64;
-        if (ver >= 2) {
-            int numAlign = ver / 7 + 2;
-            result -= (numAlign - 1) * (numAlign - 1) * 25;  // Subtract alignment patterns not overlapping with timing patterns
-            result -= (numAlign - 2) * 2 * 20;  // Subtract alignment patterns that overlap with timing patterns
-            // The two lines above are equivalent to: result -= (25 * numAlign - 10) * numAlign - 55;
-            if (ver >= 7)
-                result -= 6 * 3 * 2;  // Subtract version information
-        }
-        assert 208 <= result && result <= 29648;
-        return result;
-    }
-
-
-    // Returns a Reed-Solomon ECC generator polynomial for the given degree. This could be
-    // implemented as a lookup table over all possible parameter values, instead of as an algorithm.
-    private static byte[] reedSolomonComputeDivisor(int degree) {
-        if (degree < 1 || degree > 255)
-            throw new IllegalArgumentException("Degree out of range");
-        // Polynomial coefficients are stored from highest to lowest power, excluding the leading term which is always 1.
-        // For example the polynomial x^3 + 255x^2 + 8x + 93 is stored as the uint8 array {255, 8, 93}.
-        byte[] result = new byte[degree];
-        result[degree - 1] = 1;  // Start off with the monomial x^0
-
-        // Compute the product polynomial (x - r^0) * (x - r^1) * (x - r^2) * ... * (x - r^{degree-1}),
-        // and drop the highest monomial term which is always 1x^degree.
-        // Note that r = 0x02, which is a generator element of this field GF(2^8/0x11D).
-        int root = 1;
-        for (int i = 0; i < degree; i++) {
-            // Multiply the current product by (x - r^i)
-            for (int j = 0; j < result.length; j++) {
-                result[j] = (byte) reedSolomonMultiply(result[j] & 0xFF, root);
-                if (j + 1 < result.length)
-                    result[j] ^= result[j + 1];
-            }
-            root = reedSolomonMultiply(root, 0x02);
-        }
-        return result;
-    }
-
-
-    // Returns the Reed-Solomon error correction codeword for the given data and divisor polynomials.
-    private static byte[] reedSolomonComputeRemainder(byte[] data, byte[] divisor) {
-        Objects.requireNonNull(data);
-        Objects.requireNonNull(divisor);
-        byte[] result = new byte[divisor.length];
-        for (byte b : data) {  // Polynomial division
-            int factor = (b ^ result[0]) & 0xFF;
-            System.arraycopy(result, 1, result, 0, result.length - 1);
-            result[result.length - 1] = 0;
-            for (int i = 0; i < result.length; i++)
-                result[i] ^= reedSolomonMultiply(divisor[i] & 0xFF, factor);
-        }
-        return result;
-    }
-
-
-    // Returns the product of the two given field elements modulo GF(2^8/0x11D). The arguments and result
-    // are unsigned 8-bit integers. This could be implemented as a lookup table of 256*256 entries of uint8.
-    private static int reedSolomonMultiply(int x, int y) {
-        assert x >> 8 == 0 && y >> 8 == 0;
-        // Russian peasant multiplication
-        int z = 0;
-        for (int i = 7; i >= 0; i--) {
-            z = (z << 1) ^ ((z >>> 7) * 0x11D);
-            z ^= ((y >>> i) & 1) * x;
-        }
-        assert z >>> 8 == 0;
-        return z;
-    }
-
-
-    // Returns the number of 8-bit data (i.e. not error correction) codewords contained in any
-    // QR Code of the given version number and error correction level, with remainder bits discarded.
-    // This stateless pure function could be implemented as a (40*4)-cell lookup table.
-    public static int getNumDataCodewords(int ver, Ecc ecl) {
-        return getNumRawDataModules(ver) / 8
-                - ECC_CODEWORDS_PER_BLOCK[ecl.ordinal()][ver]
-                * NUM_ERROR_CORRECTION_BLOCKS[ecl.ordinal()][ver];
-    }
-
-
     // Can only be called immediately after a white run is added, and
     // returns either 0, 1, or 2. A helper function for getPenaltyScore().
     private int finderPenaltyCountPatterns(int[] runHistory) {
@@ -699,93 +617,4 @@ public final class QrCode {
         finderPenaltyAddHistory(currentRunLength, runHistory);
         return finderPenaltyCountPatterns(runHistory);
     }
-
-
-    // Pushes the given value to the front and drops the last value. A helper function for getPenaltyScore().
-    private static void finderPenaltyAddHistory(int currentRunLength, int[] runHistory) {
-        System.arraycopy(runHistory, 0, runHistory, 1, runHistory.length - 1);
-        runHistory[0] = currentRunLength;
-    }
-
-
-    // Returns true iff the i'th bit of x is set to 1.
-    public static boolean getBit(int x, int i) {
-        return ((x >>> i) & 1) != 0;
-    }
-
-
-    /*---- Constants and tables ----*/
-
-    /**
-     * The minimum version number  (1) supported in the QR Code Model 2 standard.
-     */
-    public static final int MIN_VERSION = 1;
-
-    /**
-     * The maximum version number (40) supported in the QR Code Model 2 standard.
-     */
-    public static final int MAX_VERSION = 40;
-
-
-    // For use in getPenaltyScore(), when evaluating which mask is best.
-    private static final int PENALTY_N1 = 3;
-    private static final int PENALTY_N2 = 3;
-    private static final int PENALTY_N3 = 40;
-    private static final int PENALTY_N4 = 10;
-
-
-    private static final byte[][] ECC_CODEWORDS_PER_BLOCK = {
-            // Version: (note that index 0 is for padding, and is set to an illegal value)
-            //0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40    Error correction level
-            {-1, 7, 10, 15, 20, 26, 18, 20, 24, 30, 18, 20, 24, 26, 30, 22, 24, 28, 30, 28, 28, 28, 28, 30, 30, 26, 28, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30},  // Low
-            {-1, 10, 16, 26, 18, 24, 16, 18, 22, 22, 26, 30, 22, 22, 24, 24, 28, 28, 26, 26, 26, 26, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28},  // Medium
-            {-1, 13, 22, 18, 26, 18, 24, 18, 22, 20, 24, 28, 26, 24, 20, 30, 24, 28, 28, 26, 30, 28, 30, 30, 30, 30, 28, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30},  // Quartile
-            {-1, 17, 28, 22, 16, 22, 28, 26, 26, 24, 28, 24, 28, 22, 24, 24, 30, 28, 28, 26, 28, 30, 24, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30},  // High
-    };
-
-    private static final byte[][] NUM_ERROR_CORRECTION_BLOCKS = {
-            // Version: (note that index 0 is for padding, and is set to an illegal value)
-            //0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40    Error correction level
-            {-1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 4, 4, 4, 4, 4, 6, 6, 6, 6, 7, 8, 8, 9, 9, 10, 12, 12, 12, 13, 14, 15, 16, 17, 18, 19, 19, 20, 21, 22, 24, 25},  // Low
-            {-1, 1, 1, 1, 2, 2, 4, 4, 4, 5, 5, 5, 8, 9, 9, 10, 10, 11, 13, 14, 16, 17, 17, 18, 20, 21, 23, 25, 26, 28, 29, 31, 33, 35, 37, 38, 40, 43, 45, 47, 49},  // Medium
-            {-1, 1, 1, 2, 2, 4, 4, 6, 6, 8, 8, 8, 10, 12, 16, 12, 17, 16, 18, 21, 20, 23, 23, 25, 27, 29, 34, 34, 35, 38, 40, 43, 45, 48, 51, 53, 56, 59, 62, 65, 68},  // Quartile
-            {-1, 1, 1, 2, 4, 4, 4, 5, 6, 8, 8, 11, 11, 16, 16, 18, 16, 19, 21, 25, 25, 25, 34, 30, 32, 35, 37, 40, 42, 45, 48, 51, 54, 57, 60, 63, 66, 70, 74, 77, 81},  // High
-    };
-
-
-
-    /*---- Public helper enumeration ----*/
-
-    /**
-     * The error correction level in a QR Code symbol.
-     */
-    public enum Ecc {
-        // Must be declared in ascending order of error protection
-        // so that the implicit ordinal() and values() work properly
-        /**
-         * The QR Code can tolerate about  7% erroneous codewords.
-         */
-        LOW(1),
-        /**
-         * The QR Code can tolerate about 15% erroneous codewords.
-         */
-        MEDIUM(0),
-        /**
-         * The QR Code can tolerate about 25% erroneous codewords.
-         */
-        QUARTILE(3),
-        /**
-         * The QR Code can tolerate about 30% erroneous codewords.
-         */
-        HIGH(2);
-
-        // In the range 0 to 3 (unsigned 2-bit integer).
-        final int formatBits;
-
-        // Constructor.
-        private Ecc(int fb) {
-            formatBits = fb;
-        }
-    }
-
 }
