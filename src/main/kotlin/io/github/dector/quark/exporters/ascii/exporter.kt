@@ -24,9 +24,10 @@ fun QrCode.toAscii(border: Int = 4, filledPixel: Char = '█', emptyPixel: Char 
         sb.appendln(" ".repeat(border))
     }
 
-    repeat(border) {
+    repeat(border - 1) {
         sb.appendln(" ".repeat(widthOrHeight))
     }
+    sb.append(" ".repeat(widthOrHeight))
 
     return sb.toString()
 }
