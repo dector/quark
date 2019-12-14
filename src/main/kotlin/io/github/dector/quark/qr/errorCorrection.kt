@@ -21,5 +21,5 @@ private val migrationMapping = mapOf(
     QrCode.Ecc.QUARTILE to ErrorCorrectionLevel.QUARTILE
 )
 
-fun QrCode.Ecc.new() = migrationMapping.getValue(this)
+fun QrCode.Ecc.neww() = migrationMapping.getValue(this)
 fun ErrorCorrectionLevel.old() = migrationMapping.entries.find { it.value == this }!!.key

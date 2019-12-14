@@ -23,6 +23,8 @@
 
 package io.nayuki.qrcodegen;
 
+import io.github.dector.quark.qr.ErrorCorrectionKt;
+import io.github.dector.quark.qr.ErrorCorrectionLevel;
 import java.awt.image.BufferedImage;
 import java.util.Arrays;
 import java.util.List;
@@ -39,16 +41,17 @@ import org.jetbrains.annotations.NotNull;
  * from 1 to 40, all 4 error correction levels, and 4 character encoding modes.</p>
  * <p>Ways to create a QR Code object:</p>
  * <ul>
- *   <li><p>High level: Take the payload data and call {@link QrCode#encodeText(String,Ecc)}
- *     or {@link QrCode#encodeBinary(byte[],Ecc)}.</p></li>
+ *   <li><p>High level: Take the payload data and call {@link QrCode#encodeText(String, Ecc)}
+ *     or {@link QrCode#encodeBinary(byte[], Ecc)}.</p></li>
  *   <li><p>Mid level: Custom-make the list of {@link QrSegment segments}
- *     and call {@link QrCode#encodeSegments(List,Ecc)} or
- *     {@link QrCode#encodeSegments(List,Ecc,int,int,int,boolean)}</p></li>
+ *     and call {@link QrCode#encodeSegments(List, Ecc)} or
+ *     {@link QrCode#encodeSegments(List, Ecc, int, int, int, boolean)}</p></li>
  *   <li><p>Low level: Custom-make the array of data codeword bytes (including segment headers and
  *     final padding, excluding error correction codewords), supply the appropriate version number,
- *     and call the {@link QrCode#QrCode(int,Ecc,byte[],int) constructor}.</p></li>
+ *     and call the {@link QrCode#QrCode(int, Ecc, byte[], int) constructor}.</p></li>
  * </ul>
  * <p>(Note that all ways require supplying the desired error correction level.)</p>
+ *
  * @see QrSegment
  */
 public final class QrCode {
@@ -57,20 +60,29 @@ public final class QrCode {
 
     // Public immutable scalar parameters:
 
-    /** The version number of this QR Code, which is between 1 and 40 (inclusive).
-     * This determines the size of this barcode. */
+    /**
+     * The version number of this QR Code, which is between 1 and 40 (inclusive).
+     * This determines the size of this barcode.
+     */
     public final int version;
 
-    /** The width and height of this QR Code, measured in modules, between
-     * 21 and 177 (inclusive). This is equal to version &#xD7; 4 + 17. */
+    /**
+     * The width and height of this QR Code, measured in modules, between
+     * 21 and 177 (inclusive). This is equal to version &#xD7; 4 + 17.
+     */
     public final int size;
 
-    /** The error correction level used in this QR Code, which is not {@code null}. */
-    public final Ecc errorCorrectionLevel;
+    /**
+     * The error correction level used in this QR Code, which is not {@code null}.
+     */
+    @NotNull
+    public final ErrorCorrectionLevel errorCorrectionLevel;
 
-    /** The index of the mask pattern used in this QR Code, which is between 0 and 7 (inclusive).
+    /**
+     * The index of the mask pattern used in this QR Code, which is between 0 and 7 (inclusive).
      * <p>Even if a QR Code is created with automatic masking requested (mask =
-     * &#x2212;1), the resulting object still has a mask value between 0 and 7. */
+     * &#x2212;1), the resulting object still has a mask value between 0 and 7.
+     */
     public final int mask;
 
     // Private grids of modules/pixels, with dimensions of size*size:
@@ -90,14 +102,15 @@ public final class QrCode {
      * Constructs a QR Code with the specified version number,
      * error correction level, data codeword bytes, and mask number.
      * <p>This is a low-level API that most users should not use directly. A mid-level
-     * API is the {@link #encodeSegments(List,Ecc,int,int,int,boolean)} function.</p>
-     * @param ver the version number to use, which must be in the range 1 to 40 (inclusive)
-     * @param ecl the error correction level to use
+     * API is the {@link #encodeSegments(List, Ecc, int, int, int, boolean)} function.</p>
+     *
+     * @param ver           the version number to use, which must be in the range 1 to 40 (inclusive)
+     * @param ecl           the error correction level to use
      * @param dataCodewords the bytes representing segments to encode (without ECC)
-     * @param msk the mask pattern to use, which is either &#x2212;1 for automatic choice or from 0 to 7 for fixed choice
-     * @throws NullPointerException if the byte array or error correction level is {@code null}
+     * @param msk           the mask pattern to use, which is either &#x2212;1 for automatic choice or from 0 to 7 for fixed choice
+     * @throws NullPointerException     if the byte array or error correction level is {@code null}
      * @throws IllegalArgumentException if the version or mask value is out of range,
-     * or if the data is the wrong length for the specified version and error correction level
+     *                                  or if the data is the wrong length for the specified version and error correction level
      */
     public QrCode(int ver, Ecc ecl, byte[] dataCodewords, int msk) {
         // Check arguments and initialize fields
@@ -107,9 +120,9 @@ public final class QrCode {
             throw new IllegalArgumentException("Mask value out of range");
         version = ver;
         size = ver * 4 + 17;
-        errorCorrectionLevel = Objects.requireNonNull(ecl);
+        errorCorrectionLevel = ErrorCorrectionKt.neww(Objects.requireNonNull(ecl));
         Objects.requireNonNull(dataCodewords);
-        modules    = new boolean[size][size];  // Initially all white
+        modules = new boolean[size][size];  // Initially all white
         isFunction = new boolean[size][size];
 
         // Compute ECC, draw modules, do masking
@@ -128,6 +141,7 @@ public final class QrCode {
      * Returns the color of the module (pixel) at the specified coordinates, which is {@code false}
      * for white or {@code true} for black. The top left corner has the coordinates (x=0, y=0).
      * If the specified coordinates are out of bounds, then {@code false} (white) is returned.
+     *
      * @param x the x coordinate, where 0 is the left edge and size&#x2212;1 is the right edge
      * @param y the y coordinate, where 0 is the top edge and size&#x2212;1 is the bottom edge
      * @return {@code true} if the coordinates are in bounds and the module
@@ -143,11 +157,12 @@ public final class QrCode {
      * <p>For example, toImage(scale=10, border=4) means to pad the QR Code with 4 white
      * border modules on all four sides, and use 10&#xD7;10 pixels to represent each module.
      * The resulting image only contains the hex colors 000000 and FFFFFF.
-     * @param scale the side length (measured in pixels, must be positive) of each module
+     *
+     * @param scale  the side length (measured in pixels, must be positive) of each module
      * @param border the number of border modules to add, which must be non-negative
      * @return a new image representing this QR Code, with padding and scaling
      * @throws IllegalArgumentException if the scale or border is out of range, or if
-     * {scale, border, size} cause the image dimensions to exceed Integer.MAX_VALUE
+     *                                  {scale, border, size} cause the image dimensions to exceed Integer.MAX_VALUE
      */
     public BufferedImage toImage(int scale, int border) {
         if (scale <= 0 || border < 0)
@@ -169,6 +184,7 @@ public final class QrCode {
     /**
      * Returns a string of SVG code for an image depicting this QR Code, with the specified number
      * of border modules. The string always uses Unix newlines (\n), regardless of the platform.
+     *
      * @param border the number of border modules to add, which must be non-negative
      * @return a string representing this QR Code as an SVG XML document
      * @throws IllegalArgumentException if the border is negative
@@ -237,7 +253,7 @@ public final class QrCode {
     // based on the given mask and this object's error correction level field.
     private void drawFormatBits(int msk) {
         // Calculate error correction code and pack bits
-        int data = errorCorrectionLevel.formatBits << 3 | msk;  // errCorrLvl is uint2, mask is uint3
+        int data = errorCorrectionLevel.getFormatBits() << 3 | msk;  // errCorrLvl is uint2, mask is uint3
         int rem = data;
         for (int i = 0; i < 10; i++)
             rem = (rem << 1) ^ ((rem >>> 9) * 0x537);
@@ -324,12 +340,12 @@ public final class QrCode {
     // codewords appended to it, based on this object's version and error correction level.
     private byte[] addEccAndInterleave(byte[] data) {
         Objects.requireNonNull(data);
-        if (data.length != getNumDataCodewords(version, errorCorrectionLevel))
+        if (data.length != getNumDataCodewords(version, ErrorCorrectionKt.old(errorCorrectionLevel)))
             throw new IllegalArgumentException();
 
         // Calculate parameter numbers
         int numBlocks = NUM_ERROR_CORRECTION_BLOCKS[errorCorrectionLevel.ordinal()][version];
-        int blockEccLen = ECC_CODEWORDS_PER_BLOCK  [errorCorrectionLevel.ordinal()][version];
+        int blockEccLen = ECC_CODEWORDS_PER_BLOCK[errorCorrectionLevel.ordinal()][version];
         int rawCodewords = getNumRawDataModules(version) / 8;
         int numShortBlocks = numBlocks - rawCodewords % numBlocks;
         int shortBlockLen = rawCodewords / numBlocks;
@@ -403,15 +419,32 @@ public final class QrCode {
             for (int x = 0; x < size; x++) {
                 boolean invert;
                 switch (msk) {
-                    case 0:  invert = (x + y) % 2 == 0;                    break;
-                    case 1:  invert = y % 2 == 0;                          break;
-                    case 2:  invert = x % 3 == 0;                          break;
-                    case 3:  invert = (x + y) % 3 == 0;                    break;
-                    case 4:  invert = (x / 3 + y / 2) % 2 == 0;            break;
-                    case 5:  invert = x * y % 2 + x * y % 3 == 0;          break;
-                    case 6:  invert = (x * y % 2 + x * y % 3) % 2 == 0;    break;
-                    case 7:  invert = ((x + y) % 2 + x * y % 3) % 2 == 0;  break;
-                    default:  throw new AssertionError();
+                    case 0:
+                        invert = (x + y) % 2 == 0;
+                        break;
+                    case 1:
+                        invert = y % 2 == 0;
+                        break;
+                    case 2:
+                        invert = x % 3 == 0;
+                        break;
+                    case 3:
+                        invert = (x + y) % 3 == 0;
+                        break;
+                    case 4:
+                        invert = (x / 3 + y / 2) % 2 == 0;
+                        break;
+                    case 5:
+                        invert = x * y % 2 + x * y % 3 == 0;
+                        break;
+                    case 6:
+                        invert = (x * y % 2 + x * y % 3) % 2 == 0;
+                        break;
+                    case 7:
+                        invert = ((x + y) % 2 + x * y % 3) % 2 == 0;
+                        break;
+                    default:
+                        throw new AssertionError();
                 }
                 modules[y][x] ^= invert & !isFunction[y][x];
             }
@@ -502,7 +535,7 @@ public final class QrCode {
         for (int y = 0; y < size - 1; y++) {
             for (int x = 0; x < size - 1; x++) {
                 boolean color = modules[y][x];
-                if (  color == modules[y][x + 1] &&
+                if (color == modules[y][x + 1] &&
                         color == modules[y + 1][x] &&
                         color == modules[y + 1][x + 1])
                     result += PENALTY_N2;
@@ -540,7 +573,7 @@ public final class QrCode {
             if (version == 32)  // Special snowflake
                 step = 26;
             else  // step = ceil[(size - 13) / (numAlign*2 - 2)] * 2
-                step = (version*4 + numAlign*2 + 1) / (numAlign*2 - 2) * 2;
+                step = (version * 4 + numAlign * 2 + 1) / (numAlign * 2 - 2) * 2;
             int[] result = new int[numAlign];
             result[0] = 6;
             for (int i = result.length - 1, pos = size - 7; i >= 1; i--, pos -= step)
@@ -593,7 +626,7 @@ public final class QrCode {
         for (int i = 0; i < degree; i++) {
             // Multiply the current product by (x - r^i)
             for (int j = 0; j < result.length; j++) {
-                result[j] = (byte)reedSolomonMultiply(result[j] & 0xFF, root);
+                result[j] = (byte) reedSolomonMultiply(result[j] & 0xFF, root);
                 if (j + 1 < result.length)
                     result[j] ^= result[j + 1];
             }
@@ -639,7 +672,7 @@ public final class QrCode {
     // This stateless pure function could be implemented as a (40*4)-cell lookup table.
     static int getNumDataCodewords(int ver, Ecc ecl) {
         return getNumRawDataModules(ver) / 8
-                - ECC_CODEWORDS_PER_BLOCK    [ecl.ordinal()][ver]
+                - ECC_CODEWORDS_PER_BLOCK[ecl.ordinal()][ver]
                 * NUM_ERROR_CORRECTION_BLOCKS[ecl.ordinal()][ver];
     }
 
@@ -682,16 +715,20 @@ public final class QrCode {
 
     /*---- Constants and tables ----*/
 
-    /** The minimum version number  (1) supported in the QR Code Model 2 standard. */
-    public static final int MIN_VERSION =  1;
+    /**
+     * The minimum version number  (1) supported in the QR Code Model 2 standard.
+     */
+    public static final int MIN_VERSION = 1;
 
-    /** The maximum version number (40) supported in the QR Code Model 2 standard. */
+    /**
+     * The maximum version number (40) supported in the QR Code Model 2 standard.
+     */
     public static final int MAX_VERSION = 40;
 
 
     // For use in getPenaltyScore(), when evaluating which mask is best.
-    private static final int PENALTY_N1 =  3;
-    private static final int PENALTY_N2 =  3;
+    private static final int PENALTY_N1 = 3;
+    private static final int PENALTY_N2 = 3;
     private static final int PENALTY_N3 = 40;
     private static final int PENALTY_N4 = 10;
 
@@ -699,7 +736,7 @@ public final class QrCode {
     private static final byte[][] ECC_CODEWORDS_PER_BLOCK = {
             // Version: (note that index 0 is for padding, and is set to an illegal value)
             //0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40    Error correction level
-            {-1,  7, 10, 15, 20, 26, 18, 20, 24, 30, 18, 20, 24, 26, 30, 22, 24, 28, 30, 28, 28, 28, 28, 30, 30, 26, 28, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30},  // Low
+            {-1, 7, 10, 15, 20, 26, 18, 20, 24, 30, 18, 20, 24, 26, 30, 22, 24, 28, 30, 28, 28, 28, 28, 30, 30, 26, 28, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30},  // Low
             {-1, 10, 16, 26, 18, 24, 16, 18, 22, 22, 26, 30, 22, 22, 24, 24, 28, 28, 26, 26, 26, 26, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28, 28},  // Medium
             {-1, 13, 22, 18, 26, 18, 24, 18, 22, 20, 24, 28, 26, 24, 20, 30, 24, 28, 28, 26, 30, 28, 30, 30, 30, 30, 28, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30},  // Quartile
             {-1, 17, 28, 22, 16, 22, 28, 26, 26, 24, 28, 24, 28, 22, 24, 24, 30, 28, 28, 26, 28, 30, 24, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30},  // High
@@ -708,9 +745,9 @@ public final class QrCode {
     private static final byte[][] NUM_ERROR_CORRECTION_BLOCKS = {
             // Version: (note that index 0 is for padding, and is set to an illegal value)
             //0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40    Error correction level
-            {-1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 4,  4,  4,  4,  4,  6,  6,  6,  6,  7,  8,  8,  9,  9, 10, 12, 12, 12, 13, 14, 15, 16, 17, 18, 19, 19, 20, 21, 22, 24, 25},  // Low
-            {-1, 1, 1, 1, 2, 2, 4, 4, 4, 5, 5,  5,  8,  9,  9, 10, 10, 11, 13, 14, 16, 17, 17, 18, 20, 21, 23, 25, 26, 28, 29, 31, 33, 35, 37, 38, 40, 43, 45, 47, 49},  // Medium
-            {-1, 1, 1, 2, 2, 4, 4, 6, 6, 8, 8,  8, 10, 12, 16, 12, 17, 16, 18, 21, 20, 23, 23, 25, 27, 29, 34, 34, 35, 38, 40, 43, 45, 48, 51, 53, 56, 59, 62, 65, 68},  // Quartile
+            {-1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 4, 4, 4, 4, 4, 6, 6, 6, 6, 7, 8, 8, 9, 9, 10, 12, 12, 12, 13, 14, 15, 16, 17, 18, 19, 19, 20, 21, 22, 24, 25},  // Low
+            {-1, 1, 1, 1, 2, 2, 4, 4, 4, 5, 5, 5, 8, 9, 9, 10, 10, 11, 13, 14, 16, 17, 17, 18, 20, 21, 23, 25, 26, 28, 29, 31, 33, 35, 37, 38, 40, 43, 45, 47, 49},  // Medium
+            {-1, 1, 1, 2, 2, 4, 4, 6, 6, 8, 8, 8, 10, 12, 16, 12, 17, 16, 18, 21, 20, 23, 23, 25, 27, 29, 34, 34, 35, 38, 40, 43, 45, 48, 51, 53, 56, 59, 62, 65, 68},  // Quartile
             {-1, 1, 1, 2, 4, 4, 4, 5, 6, 8, 8, 11, 11, 16, 16, 18, 16, 19, 21, 25, 25, 25, 34, 30, 32, 35, 37, 40, 42, 45, 48, 51, 54, 57, 60, 63, 66, 70, 74, 77, 81},  // High
     };
 
@@ -724,10 +761,22 @@ public final class QrCode {
     public enum Ecc {
         // Must be declared in ascending order of error protection
         // so that the implicit ordinal() and values() work properly
-        /** The QR Code can tolerate about  7% erroneous codewords. */ LOW(1),
-        /** The QR Code can tolerate about 15% erroneous codewords. */ MEDIUM(0),
-        /** The QR Code can tolerate about 25% erroneous codewords. */ QUARTILE(3),
-        /** The QR Code can tolerate about 30% erroneous codewords. */ HIGH(2);
+        /**
+         * The QR Code can tolerate about  7% erroneous codewords.
+         */
+        LOW(1),
+        /**
+         * The QR Code can tolerate about 15% erroneous codewords.
+         */
+        MEDIUM(0),
+        /**
+         * The QR Code can tolerate about 25% erroneous codewords.
+         */
+        QUARTILE(3),
+        /**
+         * The QR Code can tolerate about 30% erroneous codewords.
+         */
+        HIGH(2);
 
         // In the range 0 to 3 (unsigned 2-bit integer).
         final int formatBits;
