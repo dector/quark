@@ -27,7 +27,8 @@
 
 package io.github.dector.quark.exporters.svg
 
-import io.github.dector.quark.qr.QrCode
+import io.github.dector.quark.qr.QrCodeInfo
+import io.github.dector.quark.qr.size
 
 object SvgExporter {
 
@@ -41,7 +42,7 @@ object SvgExporter {
      *
      * @throws IllegalArgumentException if the border is negative
      */
-    fun exportToSvgString(qr: QrCode, border: Int): String {
+    fun exportToSvgString(qr: QrCodeInfo, border: Int): String {
         require(border >= 0) { "Border must be non-negative" }
         val brd = border.toLong()
         val sb = StringBuilder()

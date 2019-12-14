@@ -28,6 +28,8 @@
 package io.github.dector.quark.exporters.image
 
 import io.github.dector.quark.qr.QrCode
+import io.github.dector.quark.qr.size
+import io.github.dector.quark.qr.sizeWithBorder
 import java.awt.Color
 import java.awt.image.BufferedImage
 
@@ -54,7 +56,7 @@ object ImageExporter {
         require(!(border > Int.MAX_VALUE / 2 || qr.size + border * 2L > Int.MAX_VALUE / scale)) { "Scale or border too large" }
 
         val image = run {
-            val widthOrHeight = (qr.size + border * 2) * scale
+            val widthOrHeight = qr.sizeWithBorder(border) * scale
             BufferedImage(widthOrHeight, widthOrHeight, BufferedImage.TYPE_BYTE_BINARY)
         }
 
@@ -68,7 +70,7 @@ object ImageExporter {
                 (0..qr.size).forEach { j ->
                     val x = (i + border) * scale
                     val y = (j + border) * scale
-                    val color = if (qr.getModule(i, j)) Color.BLACK else Color.WHITE
+                    val color = if (qr[i, j]) Color.BLACK else Color.WHITE
 
                     g.color = color
                     g.fillRect(x, y, scale, scale)

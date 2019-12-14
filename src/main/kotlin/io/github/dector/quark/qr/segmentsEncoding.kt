@@ -48,7 +48,7 @@ import kotlin.math.min
  *
  * @throws DataTooLongException if the segments fail to fit in the largest version QR Code at the ECL, which means they are too long
  */
-fun encodeSegments(segments: List<QrSegment>, correctionLevel: ErrorCorrectionLevel): QrCode {
+fun encodeSegments(segments: List<QrSegment>, correctionLevel: ErrorCorrectionLevel): QrCodeInfo {
     return encodeSegments(segments, correctionLevel, QrConstants.MIN_VERSION, QrConstants.MAX_VERSION, -1, true)
 }
 
@@ -77,7 +77,7 @@ fun encodeSegments(segments: List<QrSegment>, correctionLevel: ErrorCorrectionLe
  * @throws IllegalArgumentException if 1 &#x2264; minVersion &#x2264; maxVersion &#x2264; 40 or &#x2212;1 &#x2264; mask &#x2264; 7 is violated
  * @throws DataTooLongException if the segments fail to fit in the maxVersion QR Code at the ECL, which means they are too long
  */
-fun encodeSegments(segments: List<QrSegment>, correctionLevel: ErrorCorrectionLevel, minVersion: Int, maxVersion: Int, mask: Int, boostEcl: Boolean): QrCode {
+fun encodeSegments(segments: List<QrSegment>, correctionLevel: ErrorCorrectionLevel, minVersion: Int, maxVersion: Int, mask: Int, boostEcl: Boolean): QrCodeInfo {
     require(minVersion in QrConstants.MIN_VERSION..maxVersion)
     require(maxVersion in minVersion..QrConstants.MAX_VERSION)
     require(mask in -1..7)
@@ -132,7 +132,7 @@ fun encodeSegments(segments: List<QrSegment>, correctionLevel: ErrorCorrectionLe
     }
 
     // Create the QR Code object
-    return QrCode(version, ecl, dataCodewords, mask)
+    return QrCodeInfo(version, ecl, dataCodewords, mask)
 }
 
 private fun calculateVersion(segments: List<QrSegment>, minVersion: Int, maxVersion: Int, correctionLevel: ErrorCorrectionLevel): Int {

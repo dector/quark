@@ -28,7 +28,7 @@ import io.github.dector.quark.qr.BitBuffer;
 import io.github.dector.quark.qr.DataTooLongException;
 import io.github.dector.quark.qr.ErrorCorrectionLevel;
 import io.github.dector.quark.qr.QrConstants;
-import io.github.dector.quark.qr.QrCode;
+import io.github.dector.quark.qr.QrCodeInfo;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -44,7 +44,7 @@ import static io.github.dector.quark.qr.SegmentsEncodingKt.getNumDataCodewords;
  * Splits text into optimal segments and encodes kanji segments.
  * Provides static functions only; not instantiable.
  * @see QrSegment
- * @see QrCode
+ * @see QrCodeInfo
  */
 public final class QrSegmentAdvanced {
 
@@ -57,7 +57,7 @@ public final class QrSegmentAdvanced {
      * <p>This function can utilize all four text encoding modes: numeric, alphanumeric, byte (UTF-8),
      * and kanji. This can be considered as a sophisticated but slower replacement for {@link
      * QrSegment#makeSegments(String)}. This requires more input parameters because it searches a
-     * range of versions, like {@link QrCode#encodeSegments(List,QrCode.Ecc,int,int,int,boolean)}.</p>
+     * range of versions, like {@link QrCodeInfo#encodeSegments(List, QrCodeInfo.Ecc,int,int,int,boolean)}.</p>
      * @param text the text to be encoded (not {@code null}), which can be any Unicode string
      * @param ecl the error correction level to use (not {@code null})
      * @param minVersion the minimum allowed version of the QR Code (at least 1)

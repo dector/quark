@@ -41,10 +41,10 @@ package io.github.dector.quark.qr
  *  - Change the text to fit the character set of a particular segment mode (e.g. alphanumeric).
  *  - Propagate the error upward to the caller/user.
  *
- * @see QrCode.encodeText
- * @see QrCode.encodeBinary
- * @see QrCode.encodeSegments
- * @see QrCode.encodeSegments
+ * @see QrCodeInfo.encodeText
+ * @see QrCodeInfo.encodeBinary
+ * @see QrCodeInfo.encodeSegments
+ * @see QrCodeInfo.encodeSegments
  * @see QrSegmentAdvanced.makeSegmentsOptimally
  */
 class DataTooLongException(msg: String = "") : IllegalArgumentException(msg)
