@@ -27,7 +27,6 @@
 
 package io.github.dector.quark.qr
 
-import io.nayuki.qrcodegen.BitBuffer
 import io.nayuki.qrcodegen.QrCode
 import java.nio.charset.StandardCharsets
 import java.util.regex.Pattern

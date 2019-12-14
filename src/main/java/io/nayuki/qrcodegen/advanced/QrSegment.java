@@ -23,7 +23,7 @@
 
 package io.nayuki.qrcodegen.advanced;
 
-import io.nayuki.qrcodegen.BitBuffer;
+import io.github.dector.quark.qr.BitBuffer;
 import io.nayuki.qrcodegen.QrCode;
 import java.util.List;
 import java.util.Objects;
@@ -56,7 +56,6 @@ public final class QrSegment {
      * @return a segment (not {@code null}) containing the data
      * @throws NullPointerException if the array is {@code null}
      */
-    @Deprecated
     public static QrSegment makeBytes(byte[] data) {
         Objects.requireNonNull(data);
         BitBuffer bb = new BitBuffer();
@@ -73,7 +72,6 @@ public final class QrSegment {
      * @throws NullPointerException if the string is {@code null}
      * @throws IllegalArgumentException if the string contains non-digit characters
      */
-    @Deprecated
     public static QrSegment makeNumeric(String digits) {
         Objects.requireNonNull(digits);
         if (!NUMERIC_REGEX.matcher(digits).matches())
@@ -98,7 +96,6 @@ public final class QrSegment {
      * @throws NullPointerException if the string is {@code null}
      * @throws IllegalArgumentException if the string contains non-encodable characters
      */
-    @Deprecated
     public static QrSegment makeAlphanumeric(String text) {
         Objects.requireNonNull(text);
         if (!ALPHANUMERIC_REGEX.matcher(text).matches())

@@ -24,7 +24,7 @@
 
 package io.nayuki.qrcodegen.advanced;
 
-import io.nayuki.qrcodegen.BitBuffer;
+import io.github.dector.quark.qr.BitBuffer;
 import io.nayuki.qrcodegen.DataTooLongException;
 import io.nayuki.qrcodegen.QrCode;
 import java.nio.charset.StandardCharsets;
@@ -33,7 +33,6 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
-import io.nayuki.qrcodegen.advanced.QrSegment;
 import io.nayuki.qrcodegen.advanced.QrSegment.Mode;
 
 

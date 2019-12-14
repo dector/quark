@@ -709,7 +709,7 @@ public final class QrCode {
 
 
     // Returns true iff the i'th bit of x is set to 1.
-    static boolean getBit(int x, int i) {
+    public static boolean getBit(int x, int i) {
         return ((x >>> i) & 1) != 0;
     }
 

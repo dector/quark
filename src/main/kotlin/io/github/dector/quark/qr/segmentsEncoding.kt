@@ -29,7 +29,6 @@ package io.github.dector.quark.qr
 
 import io.github.dector.quark.qr.Constants.ECC_CODEWORDS_PER_BLOCK
 import io.github.dector.quark.qr.Constants.NUM_ERROR_CORRECTION_BLOCKS
-import io.nayuki.qrcodegen.BitBuffer
 import io.nayuki.qrcodegen.DataTooLongException
 import io.nayuki.qrcodegen.QrCode
 import kotlin.math.min

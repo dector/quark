@@ -27,8 +27,6 @@
 
 package io.github.dector.quark.qr
 
-import io.nayuki.qrcodegen.BitBuffer
-
 /**
  * A segment of character/binary/control data in a QR Code symbol.
  * Instances of this class are immutable.
