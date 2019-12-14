@@ -1,7 +1,11 @@
 /*
- * QR Code generator library: Kotlin remix
+ * Kotlin QR code generation library based on Java library from Project Nayuki
+ * (https://www.nayuki.io/page/qr-code-generator-library)
  *
- * Original copyright (c) Project Nayuki. (MIT License)
+ * Kotlin translation and refactoring done by dector (https://github.com/dector)
+ * for quark project (https://github.com/dector/quark)
+ *
+ * Original library copyright (c) Project Nayuki. (MIT License)
  * https://www.nayuki.io/page/qr-code-generator-library
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -21,39 +25,26 @@
  *   Software.
  */
 
-package io.nayuki.qrcodegen;
-
-
-import io.nayuki.qrcodegen.advanced.QrSegmentAdvanced;
+package io.nayuki.qrcodegen
 
 /**
  * Thrown when the supplied data does not fit any QR Code version. Ways to handle this exception include:
- * <ul>
- *   <li><p>Decrease the error correction level if it was greater than {@code Ecc.LOW}.</p></li>
- *   <li><p>If the advanced {@code encodeSegments()} function with 6 arguments or the
- *     {@code makeSegmentsOptimally()} function was called, then increase the maxVersion argument
- *     if it was less than {@link QrCode#MAX_VERSION}. (This advice does not apply to the other
- *     factory functions because they search all versions up to {@code QrCode.MAX_VERSION}.)</p></li>
- *   <li><p>Split the text data into better or optimal segments in order to reduce the number of
- *     bits required. (See {@link QrSegmentAdvanced#makeSegmentsOptimally(String,QrCode.Ecc,int,int)
- *     QrSegmentAdvanced.makeSegmentsOptimally()}.)</p></li>
- *   <li><p>Change the text or binary data to be shorter.</p></li>
- *   <li><p>Change the text to fit the character set of a particular segment mode (e.g. alphanumeric).</p></li>
- *   <li><p>Propagate the error upward to the caller/user.</p></li>
- * </ul>
- * @see QrCode#encodeText(String, QrCode.Ecc)
- * @see QrCode#encodeBinary(byte[], QrCode.Ecc)
- * @see QrCode#encodeSegments(java.util.List, QrCode.Ecc)
- * @see QrCode#encodeSegments(java.util.List, QrCode.Ecc, int, int, int, boolean)
- * @see QrSegmentAdvanced#makeSegmentsOptimally(String, QrCode.Ecc, int, int)
+ *
+ *  - Decrease the error correction level if it was greater than `Ecc.LOW`.
+ *  - If the advanced `encodeSegments()` function with 6 arguments or the
+ * `makeSegmentsOptimally()` function was called, then increase the maxVersion argument
+ * if it was less than [QrCode.MAX_VERSION]. (This advice does not apply to the other
+ * factory functions because they search all versions up to `QrCode.MAX_VERSION`.)
+ *  - Split the text data into better or optimal segments in order to reduce the number of
+ * bits required. (See [     QrSegmentAdvanced.makeSegmentsOptimally()][QrSegmentAdvanced.makeSegmentsOptimally].)
+ *  - Change the text or binary data to be shorter.
+ *  - Change the text to fit the character set of a particular segment mode (e.g. alphanumeric).
+ *  - Propagate the error upward to the caller/user.
+ *
+ * @see QrCode.encodeText
+ * @see QrCode.encodeBinary
+ * @see QrCode.encodeSegments
+ * @see QrCode.encodeSegments
+ * @see QrSegmentAdvanced.makeSegmentsOptimally
  */
-public class DataTooLongException extends IllegalArgumentException {
-
-    public DataTooLongException() {}
-
-
-    public DataTooLongException(String msg) {
-        super(msg);
-    }
-
-}
+class DataTooLongException(msg: String = "") : IllegalArgumentException(msg)
