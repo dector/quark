@@ -25,7 +25,6 @@ package io.nayuki.qrcodegen.advanced;
 
 import io.github.dector.quark.qr.BitBuffer;
 import io.github.dector.quark.qr.QrConstants;
-import io.nayuki.qrcodegen.QrCode;
 import java.util.List;
 import java.util.Objects;
 import java.util.regex.Pattern;

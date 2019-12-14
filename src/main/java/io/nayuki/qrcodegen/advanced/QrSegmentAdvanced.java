@@ -28,7 +28,7 @@ import io.github.dector.quark.qr.BitBuffer;
 import io.github.dector.quark.qr.DataTooLongException;
 import io.github.dector.quark.qr.ErrorCorrectionLevel;
 import io.github.dector.quark.qr.QrConstants;
-import io.nayuki.qrcodegen.QrCode;
+import io.github.dector.quark.qr.QrCode;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
