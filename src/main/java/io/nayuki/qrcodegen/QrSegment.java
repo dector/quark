@@ -23,6 +23,7 @@
 
 package io.nayuki.qrcodegen;
 
+import io.github.dector.quark.qr.SegmentMode;
 import io.nayuki.qrcodegen.advanced.QrSegmentAdvanced;
 import java.util.List;
 import java.util.Objects;
@@ -67,7 +68,7 @@ public final class QrSegment {
             bb.appendBits(assignVal, 21);
         } else
             throw new IllegalArgumentException("ECI assignment value out of range");
-        return new QrSegment(Mode.ECI, 0, bb);
+        return new QrSegment(SegmentMode.ECI, 0, bb);
     }
 
 
@@ -75,7 +76,7 @@ public final class QrSegment {
     /*---- Instance fields ----*/
 
     /** The mode indicator of this segment. Not {@code null}. */
-    public final Mode mode;
+    public final SegmentMode mode;
 
     /** The length of this segment's unencoded data. Measured in characters for
      * numeric/alphanumeric/kanji mode, bytes for byte mode, and 0 for ECI mode.
@@ -98,7 +99,7 @@ public final class QrSegment {
      * @throws NullPointerException if the mode or data is {@code null}
      * @throws IllegalArgumentException if the character count is negative
      */
-    public QrSegment(Mode md, int numCh, BitBuffer data) {
+    public QrSegment(SegmentMode md, int numCh, BitBuffer data) {
         mode = Objects.requireNonNull(md);
         Objects.requireNonNull(data);
         if (numCh < 0)
@@ -135,51 +136,6 @@ public final class QrSegment {
                 return -1;  // The sum will overflow an int type
         }
         return (int)result;
-    }
-
-
-    /*---- Public helper enumeration ----*/
-
-    /**
-     * Describes how a segment's data bits are interpreted.
-     */
-    public enum Mode {
-
-        /*-- Constants --*/
-
-        NUMERIC     (0x1, 10, 12, 14),
-        ALPHANUMERIC(0x2,  9, 11, 13),
-        BYTE        (0x4,  8, 16, 16),
-        KANJI       (0x8,  8, 10, 12),
-        ECI         (0x7,  0,  0,  0);
-
-
-        /*-- Fields --*/
-
-        // The mode indicator bits, which is a uint4 value (range 0 to 15).
-        public final int modeBits;
-
-        // Number of character count bits for three different version ranges.
-        private final int[] numBitsCharCount;
-
-
-        /*-- Constructor --*/
-
-        private Mode(int mode, int... ccbits) {
-            modeBits = mode;
-            numBitsCharCount = ccbits;
-        }
-
-
-        /*-- Method --*/
-
-        // Returns the bit width of the character count field for a segment in this mode
-        // in a QR Code at the given version number. The result is in the range [0, 16].
-        public int numCharCountBits(int ver) {
-            assert QrCode.MIN_VERSION <= ver && ver <= QrCode.MAX_VERSION;
-            return numBitsCharCount[(ver + 7) / 17];
-        }
-
     }
 
 }

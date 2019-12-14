@@ -28,13 +28,31 @@
 package io.github.dector.quark.qr
 
 import io.nayuki.qrcodegen.BitBuffer
+import io.nayuki.qrcodegen.QrCode
 import io.nayuki.qrcodegen.QrSegment
 import java.nio.charset.StandardCharsets
 import java.util.regex.Pattern
 import kotlin.math.min
 
 // TODO rename to `Mode` and move into `QrSegment` when it'll be kotlinized
-class SegmentMode
+/**
+ * Describes how a segment's data bits are interpreted.
+ */
+enum class SegmentMode(val modeBits: Int, private vararg val numBitsCharCount: Int) {
+    NUMERIC(0x1, 10, 12, 14),
+    ALPHANUMERIC(0x2, 9, 11, 13),
+    BYTE(0x4, 8, 16, 16),
+    KANJI(0x8, 8, 10, 12),
+    ECI(0x7, 0, 0, 0);
+
+    // Returns the bit width of the character count field for a segment in this mode
+    // in a QR Code at the given version number. The result is in the range [0, 16].
+    fun numCharCountBits(version: Int): Int {
+        require(version in QrCode.MIN_VERSION..QrCode.MAX_VERSION)
+
+        return numBitsCharCount[(version + 7) / 17]
+    }
+}
 
 /**
  * Returns a list of zero or more segments to represent the specified Unicode text string.
@@ -73,7 +91,7 @@ fun makeNumeric(digits: String): QrSegment {
         i += n
     }
 
-    return QrSegment(QrSegment.Mode.NUMERIC, digits.length, bb)
+    return QrSegment(SegmentMode.NUMERIC, digits.length, bb)
 }
 
 
@@ -106,7 +124,7 @@ fun makeAlphanumeric(text: String): QrSegment {
         bb.appendBits(ALPHANUMERIC_CHARSET.indexOf(text[i]), 6)
     }
 
-    return QrSegment(QrSegment.Mode.ALPHANUMERIC, text.length, bb)
+    return QrSegment(SegmentMode.ALPHANUMERIC, text.length, bb)
 }
 
 /**
@@ -124,7 +142,7 @@ fun makeBytes(data: ByteArray): QrSegment {
         val bits = byte.toInt() and 0xFF
         buffer.appendBits(bits, 8)
     }
-    return QrSegment(QrSegment.Mode.BYTE, data.size, buffer)
+    return QrSegment(SegmentMode.BYTE, data.size, buffer)
 }
 
 private fun String.isNumeric() = NUMERIC_REGEX.matcher(this).matches()
