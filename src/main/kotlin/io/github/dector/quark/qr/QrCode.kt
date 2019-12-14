@@ -33,7 +33,6 @@ import io.github.dector.quark.qr.QrConstants.PENALTY_N1
 import io.github.dector.quark.qr.QrConstants.PENALTY_N2
 import io.github.dector.quark.qr.QrConstants.PENALTY_N3
 import io.github.dector.quark.qr.QrConstants.PENALTY_N4
-import java.awt.image.BufferedImage
 import java.util.Arrays
 import java.util.Objects
 
@@ -61,25 +60,24 @@ import java.util.Objects
  *
  * @see QrSegment
  */
-class QrCode(ver: Int, ecl: ErrorCorrectionLevel, dataCodewords: ByteArray, msk: Int) {
-    // Public immutable scalar parameters:
-
+class QrCode(
     /**
      * The version number of this QR Code, which is between 1 and 40 (inclusive).
      * This determines the size of this barcode.
      */
-    val version: Int
-
+    val version: Int,
+    /**
+     * The error correction level used in this QR Code, which is not `null`.
+     */
+    val errorCorrectionLevel: ErrorCorrectionLevel,
+    dataCodewords: ByteArray,
+    msk: Int
+) {
     /**
      * The width and height of this QR Code, measured in modules, between
      * 21 and 177 (inclusive). This is equal to version &#xD7; 4 + 17.
      */
-    val size: Int
-
-    /**
-     * The error correction level used in this QR Code, which is not `null`.
-     */
-    val errorCorrectionLevel: ErrorCorrectionLevel
+    val size: Int = version * 4 + 17
 
     /**
      * The index of the mask pattern used in this QR Code, which is between 0 and 7 (inclusive).
@@ -92,10 +90,10 @@ class QrCode(ver: Int, ecl: ErrorCorrectionLevel, dataCodewords: ByteArray, msk:
     // Private grids of modules/pixels, with dimensions of size*size:
     // The modules of this QR Code (false = white, true = black).
     // Immutable after constructor finishes. Accessed through getModule().
-    private val modules: Array<BooleanArray>
+    private val modules: Array<BooleanArray> = Array(size) { BooleanArray(size) } // Initially all white
 
     // Indicates function modules that are not subjected to masking. Discarded when constructor finishes.
-    private var isFunction: Array<BooleanArray>?
+    private var isFunction: Array<BooleanArray>? = Array(size) { BooleanArray(size) }
 
     /**
      * Constructs a QR Code with the specified version number,
@@ -113,14 +111,9 @@ class QrCode(ver: Int, ecl: ErrorCorrectionLevel, dataCodewords: ByteArray, msk:
      * or if the data is the wrong length for the specified version and error correction level
      */
     init { // Check arguments and initialize fields
-        require(!(ver < MIN_VERSION || ver > MAX_VERSION)) { "Version value out of range" }
+        require(version in MIN_VERSION..MAX_VERSION) { "Version value out of range" }
         require(!(msk < -1 || msk > 7)) { "Mask value out of range" }
-        version = ver
-        size = ver * 4 + 17
-        errorCorrectionLevel = ecl
-        Objects.requireNonNull(dataCodewords)
-        modules = Array(size) { BooleanArray(size) } // Initially all white
-        isFunction = Array(size) { BooleanArray(size) }
+
         // Compute ECC, draw modules, do masking
         drawFunctionPatterns()
         val allCodewords = addEccAndInterleave(dataCodewords)
@@ -142,34 +135,6 @@ class QrCode(ver: Int, ecl: ErrorCorrectionLevel, dataCodewords: ByteArray, msk:
         return x in 0 until size && 0 <= y && y < size && modules[y][x]
     }
 
-    /**
-     * Returns a raster image depicting this QR Code, with the specified module scale and border modules.
-     *
-     * For example, toImage(scale=10, border=4) means to pad the QR Code with 4 white
-     * border modules on all four sides, and use 10&#xD7;10 pixels to represent each module.
-     * The resulting image only contains the hex colors 000000 and FFFFFF.
-     *
-     * @param scale  the side length (measured in pixels, must be positive) of each module
-     * @param border the number of border modules to add, which must be non-negative
-     *
-     * @return a new image representing this QR Code, with padding and scaling
-     *
-     * @throws IllegalArgumentException if the scale or border is out of range, or if
-     * {scale, border, size} cause the image dimensions to exceed Integer.MAX_VALUE
-     */
-    fun toImage(scale: Int, border: Int): BufferedImage {
-        require(!(scale <= 0 || border < 0)) { "Value out of range" }
-        require(!(border > Int.MAX_VALUE / 2 || size + border * 2L > Int.MAX_VALUE / scale)) { "Scale or border too large" }
-        val result = BufferedImage((size + border * 2) * scale, (size + border * 2) * scale, BufferedImage.TYPE_INT_RGB)
-        for (y in 0 until result.height) {
-            for (x in 0 until result.width) {
-                val color = getModule(x / scale - border, y / scale - border)
-                result.setRGB(x, y, if (color) 0x000000 else 0xFFFFFF)
-            }
-        }
-        return result
-    }
-
     /*---- Private helper methods for constructor: Drawing function modules ----*/
 
     // Reads this object's version field, and draws and marks all function modules.
@@ -183,7 +148,7 @@ class QrCode(ver: Int, ecl: ErrorCorrectionLevel, dataCodewords: ByteArray, msk:
         drawFinderPattern(size - 4, 3)
         drawFinderPattern(3, size - 4)
         // Draw numerous alignment patterns
-        val alignPatPos = alignmentPatternPositions
+        val alignPatPos = getAlignmentPatternPositions()
         val numAlign = alignPatPos.size
         for (i in 0 until numAlign) {
             for (j in 0 until numAlign) { // Don't draw on the three finder corners
@@ -366,7 +331,7 @@ class QrCode(ver: Int, ecl: ErrorCorrectionLevel, dataCodewords: ByteArray, msk:
                     7 -> ((x + y) % 2 + x * y % 3) % 2 == 0
                     else -> throw AssertionError()
                 }
-                modules[y][x] = modules[y][x] xor invert and !isFunction!![y][x]
+                modules[y][x] = modules[y][x] xor (invert and !isFunction!![y][x])
             }
         }
     }
@@ -376,12 +341,13 @@ class QrCode(ver: Int, ecl: ErrorCorrectionLevel, dataCodewords: ByteArray, msk:
     // This method applies and returns the actual mask chosen, from 0 to 7.
     private fun handleConstructorMasking(msk: Int): Int {
         var msk = msk
+
         if (msk == -1) { // Automatically choose best mask
             var minPenalty = Int.MAX_VALUE
             for (i in 0..7) {
                 applyMask(i)
                 drawFormatBits(i)
-                val penalty = penaltyScore
+                val penalty: Int = getPenaltyScore()
                 if (penalty < minPenalty) {
                     msk = i
                     minPenalty = penalty
@@ -391,9 +357,13 @@ class QrCode(ver: Int, ecl: ErrorCorrectionLevel, dataCodewords: ByteArray, msk:
         }
         assert(0 <= msk && msk <= 7)
         applyMask(msk) // Apply the final choice of mask
+
         drawFormatBits(msk) // Overwrite old format bits
+
         return msk // The caller shall assign this value to the final-declared field
+
     }
+
     // Note that size is odd, so black/total != 1/2
     // Compute the smallest integer k >= 0 such that (45-5k)% <= black/total <= (55+5k)%
     // Add white border to initial run
@@ -405,8 +375,7 @@ class QrCode(ver: Int, ecl: ErrorCorrectionLevel, dataCodewords: ByteArray, msk:
 
     // Calculates and returns the penalty score based on state of this QR Code's current modules.
     // This is used by the automatic mask choice algorithm to find the mask pattern that yields the lowest score.
-    private val penaltyScore: Int
-        get() {
+    private fun getPenaltyScore(): Int {
             var result = 0
             // Adjacent modules in row having same color, and finder-like patterns
             val runHistory = IntArray(7)
@@ -481,8 +450,7 @@ class QrCode(ver: Int, ecl: ErrorCorrectionLevel, dataCodewords: ByteArray, msk:
     // Returns an ascending list of positions of alignment patterns for this version number.
     // Each position is in the range [0,177), and are used on both the x and y axes.
     // This could be implemented as lookup table of 40 variable-length lists of unsigned bytes.
-    private val alignmentPatternPositions: IntArray
-        get() = if (version == 1) intArrayOf() else {
+    private fun getAlignmentPatternPositions(): IntArray = if (version == 1) intArrayOf() else {
             val numAlign = version / 7 + 2
             val step: Int
             step = if (version == 32) // Special snowflake

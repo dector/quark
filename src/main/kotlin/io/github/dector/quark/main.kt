@@ -1,5 +1,6 @@
 package io.github.dector.quark
 
+import io.github.dector.quark.exporters.image.ImageExporter
 import io.github.dector.quark.qr.ErrorCorrectionLevel
 import io.github.dector.quark.qr.QrEncoder
 import io.github.dector.quark.qr.encodeText
@@ -11,7 +12,7 @@ fun main() {
 
     val file = File("out/qr_code.png").also { it.parentFile.mkdirs() }
     ImageIO.write(
-        qrCode.toImage(16, 4),
+        ImageExporter.exportToImage(qrCode, 16, 4),
         "png",
         file
     )

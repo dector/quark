@@ -25,43 +25,41 @@
  *   Software.
  */
 
-package io.github.dector.quark.exporters.svg
+package io.github.dector.quark.exporters.image
 
 import io.github.dector.quark.qr.QrCode
+import java.awt.image.BufferedImage
 
-object SvgExporter {
+object ImageExporter {
 
     /**
-     * Returns a string of SVG code for an image depicting this QR Code, with the specified number
-     * of border modules. The string always uses Unix newlines (\n), regardless of the platform.
+     * Returns a raster image depicting this QR Code, with the specified module scale and border modules.
      *
+     * For example, toImage(scale=10, border=4) means to pad the QR Code with 4 white
+     * border modules on all four sides, and use 10&#xD7;10 pixels to represent each module.
+     * The resulting image only contains the hex colors 000000 and FFFFFF.
+     *
+     * @param scale  the side length (measured in pixels, must be positive) of each module
      * @param border the number of border modules to add, which must be non-negative
      *
-     * @return a string representing this QR Code as an SVG XML document
+     * @return a new image representing this QR Code, with padding and scaling
      *
-     * @throws IllegalArgumentException if the border is negative
+     * @throws IllegalArgumentException if the scale or border is out of range, or if
+     * {scale, border, size} cause the image dimensions to exceed Integer.MAX_VALUE
      */
-    fun exportToSvgString(qr: QrCode, border: Int): String {
-        require(border >= 0) { "Border must be non-negative" }
-        val brd = border.toLong()
-        val sb = StringBuilder()
-            .append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
-            .append("<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n")
-            .append(String.format("<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" viewBox=\"0 0 %1\$d %1\$d\" stroke=\"none\">\n",
-                qr.size + brd * 2))
-            .append("\t<rect width=\"100%\" height=\"100%\" fill=\"#FFFFFF\"/>\n")
-            .append("\t<path d=\"")
-        for (y in 0 until qr.size) {
-            for (x in 0 until qr.size) {
-                if (qr.getModule(x, y)) {
-                    if (x != 0 || y != 0) sb.append(" ")
-                    sb.append(String.format("M%d,%dh1v1h-1z", x + brd, y + brd))
-                }
+    fun exportToImage(qr: QrCode, scale: Int, border: Int): BufferedImage {
+        require(!(scale <= 0 || border < 0)) { "Value out of range" }
+        require(!(border > Int.MAX_VALUE / 2 || qr.size + border * 2L > Int.MAX_VALUE / scale)) { "Scale or border too large" }
+
+        val result = BufferedImage((qr.size + border * 2) * scale, (qr.size + border * 2) * scale, BufferedImage.TYPE_INT_RGB)
+
+        for (y in 0 until result.height) {
+            for (x in 0 until result.width) {
+                val color = qr.getModule(x / scale - border, y / scale - border)
+                result.setRGB(x, y, if (color) 0x000000 else 0xFFFFFF)
             }
         }
-        return sb
-            .append("\" fill=\"#000000\"/>\n")
-            .append("</svg>\n")
-            .toString()
+
+        return result
     }
 }
