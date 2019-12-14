@@ -27,26 +27,26 @@
 
 package io.github.dector.quark.qr
 
-import io.nayuki.qrcodegen.QrCode
+import io.nayuki.qrcodegen.QrSegment
+import java.nio.charset.StandardCharsets
 
-enum class ErrorCorrectionLevel(
-    val errorsTolerancePercent: Int,
-    // In the range 0 to 3 (unsigned 2-bit integer).
-    val formatBits: Int
-) {
-    LOW(errorsTolerancePercent = 7, formatBits = 1),
-    MEDIUM(errorsTolerancePercent = 15, formatBits = 0),
-    QUARTILE(errorsTolerancePercent = 25, formatBits = 3),
-    HIGH(errorsTolerancePercent = 30, formatBits = 2)
+/**
+ * Returns a list of zero or more segments to represent the specified Unicode text string.
+ * The result may use various segment modes and switch modes to optimize the length of the bit stream.
+ *
+ * @param text the text to be encoded, which can be any Unicode string
+ *
+ * @return a new list of segments containing the text
+ */
+fun makeSegments(text: String): List<QrSegment> = when {
+    // Select the most efficient segment encoding automatically
+    text.isEmpty() -> emptyList()
+    text.isNumeric() -> QrSegment.makeNumeric(text).inList()
+    text.isAlphanumeric() -> QrSegment.makeAlphanumeric(text).inList()
+    else -> QrSegment.makeBytes(text.toByteArray(StandardCharsets.UTF_8)).inList()
 }
 
-// For migration purposes
-private val migrationMapping = mapOf(
-    QrCode.Ecc.LOW to ErrorCorrectionLevel.LOW,
-    QrCode.Ecc.MEDIUM to ErrorCorrectionLevel.MEDIUM,
-    QrCode.Ecc.HIGH to ErrorCorrectionLevel.HIGH,
-    QrCode.Ecc.QUARTILE to ErrorCorrectionLevel.QUARTILE
-)
+private fun String.isNumeric() = QrSegment.NUMERIC_REGEX.matcher(this).matches()
+private fun String.isAlphanumeric() = QrSegment.ALPHANUMERIC_REGEX.matcher(this).matches()
 
-fun QrCode.Ecc.neww() = migrationMapping.getValue(this)
-fun ErrorCorrectionLevel.old() = migrationMapping.entries.find { it.value == this }!!.key
+private fun QrSegment.inList() = listOf(this)

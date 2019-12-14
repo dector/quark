@@ -49,7 +49,7 @@ object QrEncoder
  * @throws DataTooLongException if the text fails to fit in the largest version QR Code at the ECL, which means it is too long
  */
 fun QrEncoder.encodeText(text: String, correctionLevel: ErrorCorrectionLevel): QrCode {
-    val segments = QrSegment.makeSegments(text)
+    val segments = makeSegments(text)
     return encodeSegments(segments, correctionLevel)
 }
 

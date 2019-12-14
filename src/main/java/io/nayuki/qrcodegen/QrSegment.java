@@ -113,30 +113,6 @@ public final class QrSegment {
         return new QrSegment(Mode.ALPHANUMERIC, text.length(), bb);
     }
 
-
-    /**
-     * Returns a list of zero or more segments to represent the specified Unicode text string.
-     * The result may use various segment modes and switch modes to optimize the length of the bit stream.
-     * @param text the text to be encoded, which can be any Unicode string
-     * @return a new mutable list (not {@code null}) of segments (not {@code null}) containing the text
-     * @throws NullPointerException if the text is {@code null}
-     */
-    public static List<QrSegment> makeSegments(String text) {
-        Objects.requireNonNull(text);
-
-        // Select the most efficient segment encoding automatically
-        List<QrSegment> result = new ArrayList<>();
-        if (text.equals(""));  // Leave result empty
-        else if (NUMERIC_REGEX.matcher(text).matches())
-            result.add(makeNumeric(text));
-        else if (ALPHANUMERIC_REGEX.matcher(text).matches())
-            result.add(makeAlphanumeric(text));
-        else
-            result.add(makeBytes(text.getBytes(StandardCharsets.UTF_8)));
-        return result;
-    }
-
-
     /**
      * Returns a segment representing an Extended Channel Interpretation
      * (ECI) designator with the specified assignment value.
