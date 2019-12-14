@@ -21,7 +21,7 @@
  *   Software.
  */
 
-package io.github.dector.quark.qr;
+package io.nayuki.qrcodegen;
 
 
 /**
