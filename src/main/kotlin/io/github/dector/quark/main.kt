@@ -1,13 +1,13 @@
-package io.github.dector.project
+package io.github.dector.quark
 
+import io.github.dector.quark.qr.ErrorCorrectionLevel
 import io.github.dector.quark.qr.QrEncoder
 import io.github.dector.quark.qr.encodeText
-import io.nayuki.qrcodegen.QrCode
 import java.io.File
 import javax.imageio.ImageIO
 
 fun main() {
-    val qrCode = QrEncoder.encodeText("https://kotlinlang.org", QrCode.Ecc.LOW)
+    val qrCode = QrEncoder.encodeText("https://kotlinlang.org", ErrorCorrectionLevel.LOW)
 
     val file = File("out/qr_code.png").also { it.parentFile.mkdirs() }
     ImageIO.write(

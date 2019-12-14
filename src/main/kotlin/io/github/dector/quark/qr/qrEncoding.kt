@@ -29,7 +29,6 @@ package io.github.dector.quark.qr
 
 import io.nayuki.qrcodegen.DataTooLongException
 import io.nayuki.qrcodegen.QrCode
-import io.nayuki.qrcodegen.QrCode.Ecc
 import io.nayuki.qrcodegen.QrSegment
 
 // TODO Used as an intermediate entity for extension-based API design. All extensions should be implemented on top of `QrCode.Companion`.
@@ -43,15 +42,15 @@ object QrEncoder
  * ecl argument if it can be done without increasing the version.
  *
  * @param text the text to be encoded, which can be any Unicode string
- * @param ecl the error correction level to use (boostable)
+ * @param correctionLevel the error correction level to use (boostable)
  *
  * @return a QR Code representing the text
  *
  * @throws DataTooLongException if the text fails to fit in the largest version QR Code at the ECL, which means it is too long
  */
-fun QrEncoder.encodeText(text: String, ecl: QrCode.Ecc): QrCode {
+fun QrEncoder.encodeText(text: String, correctionLevel: ErrorCorrectionLevel): QrCode {
     val segments = QrSegment.makeSegments(text)
-    return encodeSegments(segments, ecl)
+    return encodeSegments(segments, correctionLevel)
 }
 
 /**
@@ -67,7 +66,7 @@ fun QrEncoder.encodeText(text: String, ecl: QrCode.Ecc): QrCode {
  *
  * @throws DataTooLongException if the data fails to fit in the largest version QR Code at the ECL, which means it is too long
  */
-fun QrEncoder.encodeBinary(data: ByteArray, ecl: Ecc): QrCode {
+fun QrEncoder.encodeBinary(data: ByteArray, correctionLevel: ErrorCorrectionLevel): QrCode {
     val seg = QrSegment.makeBytes(data)
-    return encodeSegments(listOf(seg), ecl)
+    return encodeSegments(listOf(seg), correctionLevel)
 }

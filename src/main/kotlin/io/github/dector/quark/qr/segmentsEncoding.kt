@@ -5,7 +5,6 @@ import io.github.dector.quark.qr.Constants.NUM_ERROR_CORRECTION_BLOCKS
 import io.nayuki.qrcodegen.BitBuffer
 import io.nayuki.qrcodegen.DataTooLongException
 import io.nayuki.qrcodegen.QrCode
-import io.nayuki.qrcodegen.QrCode.Ecc
 import io.nayuki.qrcodegen.QrSegment
 import kotlin.math.min
 
@@ -20,14 +19,14 @@ import kotlin.math.min
  * This is a mid-level API; the high-level API is [QrEncoder.encodeText] and [QrEncoder.encodeBinary].
  *
  * @param segments the segments to encode
- * @param ecl the error correction level to use (boostable)
+ * @param correctionLevel the error correction level to use (boostable)
  *
  * @return a QR Code representing the segments
  *
  * @throws DataTooLongException if the segments fail to fit in the largest version QR Code at the ECL, which means they are too long
  */
-fun encodeSegments(segments: List<QrSegment>, ecl: Ecc): QrCode {
-    return encodeSegments(segments, ecl, QrCode.MIN_VERSION, QrCode.MAX_VERSION, -1, true)
+fun encodeSegments(segments: List<QrSegment>, correctionLevel: ErrorCorrectionLevel): QrCode {
+    return encodeSegments(segments, correctionLevel, QrCode.MIN_VERSION, QrCode.MAX_VERSION, -1, true)
 }
 
 /**
@@ -44,7 +43,7 @@ fun encodeSegments(segments: List<QrSegment>, ecl: Ecc): QrCode {
  * This is a mid-level API; the high-level API is [QrEncoder.encodeText] and [QrEncoder.encodeBinary].
  *
  * @param segments the segments to encode
- * @param ecl the error correction level to use  (boostable)
+ * @param correctionLevel the error correction level to use  (boostable)
  * @param minVersion the minimum allowed version of the QR Code (at least 1)
  * @param maxVersion the maximum allowed version of the QR Code (at most 40)
  * @param mask the mask number to use (between 0 and 7 (inclusive)), or -1 for automatic mask
@@ -55,12 +54,12 @@ fun encodeSegments(segments: List<QrSegment>, ecl: Ecc): QrCode {
  * @throws IllegalArgumentException if 1 &#x2264; minVersion &#x2264; maxVersion &#x2264; 40 or &#x2212;1 &#x2264; mask &#x2264; 7 is violated
  * @throws DataTooLongException if the segments fail to fit in the maxVersion QR Code at the ECL, which means they are too long
  */
-fun encodeSegments(segments: List<QrSegment>, ecl: Ecc, minVersion: Int, maxVersion: Int, mask: Int, boostEcl: Boolean): QrCode {
+fun encodeSegments(segments: List<QrSegment>, correctionLevel: ErrorCorrectionLevel, minVersion: Int, maxVersion: Int, mask: Int, boostEcl: Boolean): QrCode {
     require(minVersion in QrCode.MIN_VERSION..maxVersion)
     require(maxVersion in minVersion..QrCode.MAX_VERSION)
     require(mask in -1..7)
 
-    var selectedEcl = ecl
+    var ecl = correctionLevel
 
     // Find the minimal version number to use
     val version = calculateVersion(segments, minVersion, maxVersion, ecl)
@@ -68,9 +67,14 @@ fun encodeSegments(segments: List<QrSegment>, ecl: Ecc, minVersion: Int, maxVers
 
     // Increase the error correction level while the data still fits in the current version number
     if (boostEcl) {
-        Ecc.values()
+        val newEcl = ErrorCorrectionLevel.values()
+            .sortedBy { it.errorsTolerancePercent }
+            .dropWhile { it != ecl }
             .lastOrNull { dataUsedBits <= getNumDataCodewords(version, it) * 8 }
-            ?.let { selectedEcl = it }
+
+        if (newEcl != null) {
+            ecl = newEcl
+        }
     }
 
     // Concatenate all segments to create the data bit string
@@ -84,7 +88,7 @@ fun encodeSegments(segments: List<QrSegment>, ecl: Ecc, minVersion: Int, maxVers
     assert(bb.bitLength() == dataUsedBits)
 
     // Add terminator and pad up to a byte if applicable
-    val dataCapacityBits = getNumDataCodewords(version, selectedEcl) * 8
+    val dataCapacityBits = getNumDataCodewords(version, ecl) * 8
     assert(bb.bitLength() <= dataCapacityBits)
 
     bb.appendBits(0, min(4, dataCapacityBits - bb.bitLength()))
@@ -105,15 +109,15 @@ fun encodeSegments(segments: List<QrSegment>, ecl: Ecc, minVersion: Int, maxVers
     }
 
     // Create the QR Code object
-    return QrCode(version, selectedEcl, dataCodewords, mask)
+    return QrCode(version, ecl.old(), dataCodewords, mask)
 }
 
-private fun calculateVersion(segments: List<QrSegment>, minVersion: Int, maxVersion: Int, ecl: Ecc): Int {
+private fun calculateVersion(segments: List<QrSegment>, minVersion: Int, maxVersion: Int, correctionLevel: ErrorCorrectionLevel): Int {
     var version = minVersion
     var dataUsedBits: Int
 
     while (true) {
-        val dataCapacityBits = getNumDataCodewords(version, ecl) * 8 // Number of data bits available
+        val dataCapacityBits = getNumDataCodewords(version, correctionLevel) * 8 // Number of data bits available
         dataUsedBits = getTotalBits(segments, version)
 
         if (dataUsedBits != -1 && dataUsedBits <= dataCapacityBits) {
@@ -136,9 +140,9 @@ private fun calculateVersion(segments: List<QrSegment>, minVersion: Int, maxVers
     return version
 }
 
-fun getNumDataCodewords(ver: Int, ecl: Ecc): Int =
+fun getNumDataCodewords(ver: Int, correctionLevel: ErrorCorrectionLevel): Int =
     (getNumRawDataModules(ver) / 8) -
-        (ECC_CODEWORDS_PER_BLOCK[ecl.ordinal][ver] * NUM_ERROR_CORRECTION_BLOCKS[ecl.ordinal][ver])
+        (ECC_CODEWORDS_PER_BLOCK[correctionLevel.ordinal][ver] * NUM_ERROR_CORRECTION_BLOCKS[correctionLevel.ordinal][ver])
 
 // Returns the number of data bits that can be stored in a QR Code of the given version number, after
 // all function modules are excluded. This includes remainder bits, so it might not be a multiple of 8.
