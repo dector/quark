@@ -51,7 +51,7 @@ object QrEncoder
  */
 fun QrEncoder.encodeText(text: String, ecl: QrCode.Ecc): QrCode {
     val segments = QrSegment.makeSegments(text)
-    return QrCode.encodeSegments(segments, ecl)
+    return encodeSegments(segments, ecl)
 }
 
 /**
@@ -69,5 +69,5 @@ fun QrEncoder.encodeText(text: String, ecl: QrCode.Ecc): QrCode {
  */
 fun QrEncoder.encodeBinary(data: ByteArray, ecl: Ecc): QrCode {
     val seg = QrSegment.makeBytes(data)
-    return QrCode.encodeSegments(listOf(seg), ecl)
+    return encodeSegments(listOf(seg), ecl)
 }

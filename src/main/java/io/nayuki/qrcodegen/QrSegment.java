@@ -269,7 +269,7 @@ public final class QrSegment {
         /*-- Fields --*/
 
         // The mode indicator bits, which is a uint4 value (range 0 to 15).
-        final int modeBits;
+        public final int modeBits;
 
         // Number of character count bits for three different version ranges.
         private final int[] numBitsCharCount;
@@ -287,7 +287,7 @@ public final class QrSegment {
 
         // Returns the bit width of the character count field for a segment in this mode
         // in a QR Code at the given version number. The result is in the range [0, 16].
-        int numCharCountBits(int ver) {
+        public int numCharCountBits(int ver) {
             assert QrCode.MIN_VERSION <= ver && ver <= QrCode.MAX_VERSION;
             return numBitsCharCount[(ver + 7) / 17];
         }
