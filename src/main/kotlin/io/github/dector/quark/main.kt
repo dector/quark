@@ -10,6 +10,6 @@ fun main() {
     ImageIO.write(
         qrCode.toImage(16, 4),
         "png",
-        File("out/qr_code.png")
+        File("out/qr_code.png").also { it.parentFile.mkdirs() }
     )
 }
