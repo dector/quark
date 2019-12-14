@@ -7,6 +7,7 @@ import io.nayuki.qrcodegen.DataTooLongException
 import io.nayuki.qrcodegen.QrCode
 import io.nayuki.qrcodegen.QrCode.Ecc
 import io.nayuki.qrcodegen.QrSegment
+import kotlin.math.min
 
 /**
  * Returns a QR Code representing the specified segments at the specified error correction
@@ -59,30 +60,34 @@ fun encodeSegments(segments: List<QrSegment>, ecl: Ecc, minVersion: Int, maxVers
     require(maxVersion in minVersion..QrCode.MAX_VERSION)
     require(mask in -1..7)
 
-    var errorCorrectionLevel = ecl
+    var selectedEcl = ecl
 
     // Find the minimal version number to use
     val version = calculateVersion(segments, minVersion, maxVersion, ecl)
     val dataUsedBits = getTotalBits(segments, version)
 
     // Increase the error correction level while the data still fits in the current version number
-    for (newEcl in Ecc.values()) { // From low to high
-        if (boostEcl && dataUsedBits <= getNumDataCodewords(version, newEcl) * 8) errorCorrectionLevel = newEcl
+    if (boostEcl) {
+        Ecc.values()
+            .lastOrNull { dataUsedBits <= getNumDataCodewords(version, it) * 8 }
+            ?.let { selectedEcl = it }
     }
 
     // Concatenate all segments to create the data bit string
-    val bb = BitBuffer()
-    for (seg in segments) {
-        bb.appendBits(seg.mode.modeBits, 4)
-        bb.appendBits(seg.numChars, seg.mode.numCharCountBits(version))
-        bb.appendData(seg.data)
+    val bb = BitBuffer().apply {
+        segments.forEach { segment ->
+            appendBits(segment.mode.modeBits, 4)
+            appendBits(segment.numChars, segment.mode.numCharCountBits(version))
+            appendData(segment.data)
+        }
     }
     assert(bb.bitLength() == dataUsedBits)
 
     // Add terminator and pad up to a byte if applicable
-    val dataCapacityBits = getNumDataCodewords(version, errorCorrectionLevel) * 8
+    val dataCapacityBits = getNumDataCodewords(version, selectedEcl) * 8
     assert(bb.bitLength() <= dataCapacityBits)
-    bb.appendBits(0, Math.min(4, dataCapacityBits - bb.bitLength()))
+
+    bb.appendBits(0, min(4, dataCapacityBits - bb.bitLength()))
     bb.appendBits(0, (8 - bb.bitLength() % 8) % 8)
     assert(bb.bitLength() % 8 == 0)
 
@@ -100,7 +105,7 @@ fun encodeSegments(segments: List<QrSegment>, ecl: Ecc, minVersion: Int, maxVers
     }
 
     // Create the QR Code object
-    return QrCode(version, errorCorrectionLevel, dataCodewords, mask)
+    return QrCode(version, selectedEcl, dataCodewords, mask)
 }
 
 private fun calculateVersion(segments: List<QrSegment>, minVersion: Int, maxVersion: Int, ecl: Ecc): Int {
@@ -111,14 +116,20 @@ private fun calculateVersion(segments: List<QrSegment>, minVersion: Int, maxVers
         val dataCapacityBits = getNumDataCodewords(version, ecl) * 8 // Number of data bits available
         dataUsedBits = getTotalBits(segments, version)
 
-        if (dataUsedBits != -1 && dataUsedBits <= dataCapacityBits) break // This version number is found to be suitable
+        if (dataUsedBits != -1 && dataUsedBits <= dataCapacityBits) {
+            // This version number is found to be suitable
+            break
+        }
 
-        if (version >= maxVersion) { // All versions in the range could not fit the given data
-            var msg = "Segment too long"
-            if (dataUsedBits != -1) msg = String.format("Data length = %d bits, Max capacity = %d bits", dataUsedBits, dataCapacityBits)
+        version++
+
+        // All versions in the range could not fit the given data
+        if (version > maxVersion) {
+            val msg = if (dataUsedBits != -1) {
+                String.format("Data length = %d bits, Max capacity = %d bits", dataUsedBits, dataCapacityBits)
+            } else "Segment too long"
             throw DataTooLongException(msg)
         }
-        version++
     }
     assert(dataUsedBits != -1)
 
@@ -152,7 +163,7 @@ fun getNumRawDataModules(ver: Int): Int {
         if (ver >= 7) result -= 6 * 3 * 2 // Subtract version information
     }
 
-    assert(208 <= result && result <= 29648)
+    assert(result in 208..29648)
 
     return result
 }
