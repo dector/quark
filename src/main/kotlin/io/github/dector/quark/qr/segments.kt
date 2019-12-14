@@ -30,7 +30,11 @@ package io.github.dector.quark.qr
 import io.nayuki.qrcodegen.BitBuffer
 import io.nayuki.qrcodegen.QrSegment
 import java.nio.charset.StandardCharsets
+import java.util.regex.Pattern
 import kotlin.math.min
+
+// TODO rename to `Mode` and move into `QrSegment` when it'll be kotlinized
+class SegmentMode
 
 /**
  * Returns a list of zero or more segments to represent the specified Unicode text string.
@@ -57,7 +61,7 @@ fun makeSegments(text: String): List<QrSegment> = when {
  * @throws IllegalArgumentException if the string contains non-digit characters
  */
 fun makeNumeric(digits: String): QrSegment {
-    require(QrSegment.NUMERIC_REGEX.matcher(digits).matches()) { "String contains non-numeric characters" }
+    require(NUMERIC_REGEX.matcher(digits).matches()) { "String contains non-numeric characters" }
 
     val bb = BitBuffer()
 
@@ -84,22 +88,22 @@ fun makeNumeric(digits: String): QrSegment {
  * @throws IllegalArgumentException if the string contains non-encodable characters
  */
 fun makeAlphanumeric(text: String): QrSegment {
-    require(QrSegment.ALPHANUMERIC_REGEX.matcher(text).matches()) { "String contains unencodable characters in alphanumeric mode" }
+    require(ALPHANUMERIC_REGEX.matcher(text).matches()) { "String contains unencodable characters in alphanumeric mode" }
 
     val bb = BitBuffer()
 
     var i = 0
     while (i <= text.length - 2) {
         // Process groups of 2
-        var temp = QrSegment.ALPHANUMERIC_CHARSET.indexOf(text[i]) * 45
-        temp += QrSegment.ALPHANUMERIC_CHARSET.indexOf(text[i + 1])
+        var temp = ALPHANUMERIC_CHARSET.indexOf(text[i]) * 45
+        temp += ALPHANUMERIC_CHARSET.indexOf(text[i + 1])
         bb.appendBits(temp, 11)
         i += 2
     }
 
     if (i < text.length) {
         // 1 character remaining
-        bb.appendBits(QrSegment.ALPHANUMERIC_CHARSET.indexOf(text[i]), 6)
+        bb.appendBits(ALPHANUMERIC_CHARSET.indexOf(text[i]), 6)
     }
 
     return QrSegment(QrSegment.Mode.ALPHANUMERIC, text.length, bb)
@@ -123,7 +127,28 @@ fun makeBytes(data: ByteArray): QrSegment {
     return QrSegment(QrSegment.Mode.BYTE, data.size, buffer)
 }
 
-private fun String.isNumeric() = QrSegment.NUMERIC_REGEX.matcher(this).matches()
-private fun String.isAlphanumeric() = QrSegment.ALPHANUMERIC_REGEX.matcher(this).matches()
+private fun String.isNumeric() = NUMERIC_REGEX.matcher(this).matches()
+private fun String.isAlphanumeric() = ALPHANUMERIC_REGEX.matcher(this).matches()
 
 private fun QrSegment.inList() = listOf(this)
+
+/** Describes precisely all strings that are encodable in numeric mode. To test whether a
+ * string `s` is encodable: `boolean ok = NUMERIC_REGEX.matcher(s).matches();`.
+ * A string is encodable iff each character is in the range 0 to 9.
+ *
+ * @see .makeNumeric
+ */
+private val NUMERIC_REGEX = Pattern.compile("[0-9]*")
+
+/** Describes precisely all strings that are encodable in alphanumeric mode. To test whether a
+ * string `s` is encodable: `boolean ok = ALPHANUMERIC_REGEX.matcher(s).matches();`.
+ * A string is encodable iff each character is in the following set: 0 to 9, A to Z
+ * (uppercase only), space, dollar, percent, asterisk, plus, hyphen, period, slash, colon.
+ *
+ * @see .makeAlphanumeric
+ */
+private val ALPHANUMERIC_REGEX = Pattern.compile("[A-Z0-9 $%*+./:-]*")
+
+// The set of all legal characters in alphanumeric mode, where
+// each character value maps to the index in the string.
+private const val ALPHANUMERIC_CHARSET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:"

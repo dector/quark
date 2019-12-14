@@ -24,6 +24,8 @@
 package io.nayuki.qrcodegen;
 
 
+import io.nayuki.qrcodegen.advanced.QrSegmentAdvanced;
+
 /**
  * Thrown when the supplied data does not fit any QR Code version. Ways to handle this exception include:
  * <ul>

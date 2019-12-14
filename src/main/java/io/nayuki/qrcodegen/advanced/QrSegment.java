@@ -21,9 +21,10 @@
  *   Software.
  */
 
-package io.nayuki.qrcodegen;
+package io.nayuki.qrcodegen.advanced;
 
-import io.nayuki.qrcodegen.advanced.QrSegmentAdvanced;
+import io.nayuki.qrcodegen.BitBuffer;
+import io.nayuki.qrcodegen.QrCode;
 import java.util.List;
 import java.util.Objects;
 import java.util.regex.Pattern;
@@ -35,7 +36,7 @@ import java.util.regex.Pattern;
  * <p>The mid-level way to create a segment is to take the payload data and call a
  * static factory function such as {@link QrSegment#makeNumeric(String)}. The low-level
  * way to create a segment is to custom-make the bit buffer and call the {@link
- * QrSegment#QrSegment(Mode,int,BitBuffer) constructor} with appropriate values.</p>
+ * QrSegment#QrSegment(Mode,int, BitBuffer) constructor} with appropriate values.</p>
  * <p>This segment class imposes no length restrictions, but QR Codes have restrictions.
  * Even in the most favorable conditions, a QR Code can only hold 7089 characters of data.
  * Any segment longer than this is meaningless for the purpose of generating QR Codes.
@@ -45,6 +46,75 @@ import java.util.regex.Pattern;
 public final class QrSegment {
 
     /*---- Static factory functions (mid level) ----*/
+
+    /**
+     * Returns a segment representing the specified binary data
+     * encoded in byte mode. All input byte arrays are acceptable.
+     * <p>Any text string can be converted to UTF-8 bytes ({@code
+     * s.getBytes(StandardCharsets.UTF_8)}) and encoded as a byte mode segment.</p>
+     * @param data the binary data (not {@code null})
+     * @return a segment (not {@code null}) containing the data
+     * @throws NullPointerException if the array is {@code null}
+     */
+    @Deprecated
+    public static QrSegment makeBytes(byte[] data) {
+        Objects.requireNonNull(data);
+        BitBuffer bb = new BitBuffer();
+        for (byte b : data)
+            bb.appendBits(b & 0xFF, 8);
+        return new QrSegment(Mode.BYTE, data.length, bb);
+    }
+
+
+    /**
+     * Returns a segment representing the specified string of decimal digits encoded in numeric mode.
+     * @param digits the text (not {@code null}), with only digits from 0 to 9 allowed
+     * @return a segment (not {@code null}) containing the text
+     * @throws NullPointerException if the string is {@code null}
+     * @throws IllegalArgumentException if the string contains non-digit characters
+     */
+    @Deprecated
+    public static QrSegment makeNumeric(String digits) {
+        Objects.requireNonNull(digits);
+        if (!NUMERIC_REGEX.matcher(digits).matches())
+            throw new IllegalArgumentException("String contains non-numeric characters");
+
+        BitBuffer bb = new BitBuffer();
+        for (int i = 0; i < digits.length(); ) {  // Consume up to 3 digits per iteration
+            int n = Math.min(digits.length() - i, 3);
+            bb.appendBits(Integer.parseInt(digits.substring(i, i + n)), n * 3 + 1);
+            i += n;
+        }
+        return new QrSegment(Mode.NUMERIC, digits.length(), bb);
+    }
+
+
+    /**
+     * Returns a segment representing the specified text string encoded in alphanumeric mode.
+     * The characters allowed are: 0 to 9, A to Z (uppercase only), space,
+     * dollar, percent, asterisk, plus, hyphen, period, slash, colon.
+     * @param text the text (not {@code null}), with only certain characters allowed
+     * @return a segment (not {@code null}) containing the text
+     * @throws NullPointerException if the string is {@code null}
+     * @throws IllegalArgumentException if the string contains non-encodable characters
+     */
+    @Deprecated
+    public static QrSegment makeAlphanumeric(String text) {
+        Objects.requireNonNull(text);
+        if (!ALPHANUMERIC_REGEX.matcher(text).matches())
+            throw new IllegalArgumentException("String contains unencodable characters in alphanumeric mode");
+
+        BitBuffer bb = new BitBuffer();
+        int i;
+        for (i = 0; i <= text.length() - 2; i += 2) {  // Process groups of 2
+            int temp = ALPHANUMERIC_CHARSET.indexOf(text.charAt(i)) * 45;
+            temp += ALPHANUMERIC_CHARSET.indexOf(text.charAt(i + 1));
+            bb.appendBits(temp, 11);
+        }
+        if (i < text.length())  // 1 character remaining
+            bb.appendBits(ALPHANUMERIC_CHARSET.indexOf(text.charAt(i)), 6);
+        return new QrSegment(Mode.ALPHANUMERIC, text.length(), bb);
+    }
 
     /**
      * Returns a segment representing an Extended Channel Interpretation
@@ -122,7 +192,7 @@ public final class QrSegment {
     // Calculates the number of bits needed to encode the given segments at the given version.
     // Returns a non-negative number if successful. Otherwise returns -1 if a segment has too
     // many characters to fit its length field, or the total bits exceeds Integer.MAX_VALUE.
-    static int getTotalBits(List<QrSegment> segs, int version) {
+    public static int getTotalBits(List<QrSegment> segs, int version) {
         Objects.requireNonNull(segs);
         long result = 0;
         for (QrSegment seg : segs) {
@@ -136,6 +206,27 @@ public final class QrSegment {
         }
         return (int)result;
     }
+
+
+    /*---- Constants ----*/
+
+    /** Describes precisely all strings that are encodable in numeric mode. To test whether a
+     * string {@code s} is encodable: {@code boolean ok = NUMERIC_REGEX.matcher(s).matches();}.
+     * A string is encodable iff each character is in the range 0 to 9.
+     * @see #makeNumeric(String) */
+    public static final Pattern NUMERIC_REGEX = Pattern.compile("[0-9]*");
+
+    /** Describes precisely all strings that are encodable in alphanumeric mode. To test whether a
+     * string {@code s} is encodable: {@code boolean ok = ALPHANUMERIC_REGEX.matcher(s).matches();}.
+     * A string is encodable iff each character is in the following set: 0 to 9, A to Z
+     * (uppercase only), space, dollar, percent, asterisk, plus, hyphen, period, slash, colon.
+     * @see #makeAlphanumeric(String) */
+    public static final Pattern ALPHANUMERIC_REGEX = Pattern.compile("[A-Z0-9 $%*+./:-]*");
+
+    // The set of all legal characters in alphanumeric mode, where
+    // each character value maps to the index in the string.
+    public static final String ALPHANUMERIC_CHARSET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:";
+
 
 
     /*---- Public helper enumeration ----*/
