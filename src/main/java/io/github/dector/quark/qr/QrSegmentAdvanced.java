@@ -1,7 +1,8 @@
 /*
- * QR Code generator library - Optional advanced logic (Java)
+ * QR Code generator library: Kotlin remix
+ * Optional advanced logic
  *
- * Copyright (c) Project Nayuki. (MIT License)
+ * Original copyright (c) Project Nayuki. (MIT License)
  * https://www.nayuki.io/page/qr-code-generator-library
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -21,7 +22,7 @@
  *   Software.
  */
 
-package io.nayuki.qrcodegen;
+package io.github.dector.quark.qr;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -29,7 +30,7 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
-import io.nayuki.qrcodegen.QrSegment.Mode;
+import io.github.dector.quark.qr.QrSegment.Mode;
 
 
 /**

@@ -1,6 +1,6 @@
 package io.github.dector.project
 
-import io.nayuki.qrcodegen.QrCode
+import io.github.dector.quark.qr.QrCode
 import java.io.File
 import javax.imageio.ImageIO
 

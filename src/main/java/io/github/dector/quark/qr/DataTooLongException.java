@@ -1,7 +1,7 @@
 /*
- * QR Code generator library (Java)
+ * QR Code generator library: Kotlin remix
  *
- * Copyright (c) Project Nayuki. (MIT License)
+ * Original copyright (c) Project Nayuki. (MIT License)
  * https://www.nayuki.io/page/qr-code-generator-library
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -21,7 +21,7 @@
  *   Software.
  */
 
-package io.nayuki.qrcodegen;
+package io.github.dector.quark.qr;
 
 
 /**
