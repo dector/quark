@@ -56,6 +56,7 @@ public final class QrSegment {
      * @return a segment (not {@code null}) containing the data
      * @throws NullPointerException if the array is {@code null}
      */
+    @Deprecated
     public static QrSegment makeBytes(byte[] data) {
         Objects.requireNonNull(data);
         BitBuffer bb = new BitBuffer();
@@ -72,6 +73,7 @@ public final class QrSegment {
      * @throws NullPointerException if the string is {@code null}
      * @throws IllegalArgumentException if the string contains non-digit characters
      */
+    @Deprecated
     public static QrSegment makeNumeric(String digits) {
         Objects.requireNonNull(digits);
         if (!NUMERIC_REGEX.matcher(digits).matches())
@@ -96,6 +98,7 @@ public final class QrSegment {
      * @throws NullPointerException if the string is {@code null}
      * @throws IllegalArgumentException if the string contains non-encodable characters
      */
+    @Deprecated
     public static QrSegment makeAlphanumeric(String text) {
         Objects.requireNonNull(text);
         if (!ALPHANUMERIC_REGEX.matcher(text).matches())
@@ -222,7 +225,7 @@ public final class QrSegment {
 
     // The set of all legal characters in alphanumeric mode, where
     // each character value maps to the index in the string.
-    static final String ALPHANUMERIC_CHARSET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:";
+    public static final String ALPHANUMERIC_CHARSET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:";
 
 
 

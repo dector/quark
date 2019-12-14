@@ -67,6 +67,6 @@ fun QrEncoder.encodeText(text: String, correctionLevel: ErrorCorrectionLevel): Q
  * @throws DataTooLongException if the data fails to fit in the largest version QR Code at the ECL, which means it is too long
  */
 fun QrEncoder.encodeBinary(data: ByteArray, correctionLevel: ErrorCorrectionLevel): QrCode {
-    val seg = QrSegment.makeBytes(data)
+    val seg = makeBytes(data)
     return encodeSegments(listOf(seg), correctionLevel)
 }
