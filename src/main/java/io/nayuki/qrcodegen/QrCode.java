@@ -27,6 +27,7 @@ import java.awt.image.BufferedImage;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import org.jetbrains.annotations.NotNull;
 
 
 /**
@@ -51,49 +52,6 @@ import java.util.Objects;
  * @see QrSegment
  */
 public final class QrCode {
-
-    /*---- Static factory functions (high level) ----*/
-
-    /**
-     * Returns a QR Code representing the specified Unicode text string at the specified error correction level.
-     * As a conservative upper bound, this function is guaranteed to succeed for strings that have 738 or fewer
-     * Unicode code points (not UTF-16 code units) if the low error correction level is used. The smallest possible
-     * QR Code version is automatically chosen for the output. The ECC level of the result may be higher than the
-     * ecl argument if it can be done without increasing the version.
-     * @param text the text to be encoded (not {@code null}), which can be any Unicode string
-     * @param ecl the error correction level to use (not {@code null}) (boostable)
-     * @return a QR Code (not {@code null}) representing the text
-     * @throws NullPointerException if the text or error correction level is {@code null}
-     * @throws DataTooLongException if the text fails to fit in the
-     * largest version QR Code at the ECL, which means it is too long
-     */
-    public static QrCode encodeText(String text, Ecc ecl) {
-        Objects.requireNonNull(text);
-        Objects.requireNonNull(ecl);
-        List<QrSegment> segs = QrSegment.makeSegments(text);
-        return encodeSegments(segs, ecl);
-    }
-
-
-    /**
-     * Returns a QR Code representing the specified binary data at the specified error correction level.
-     * This function always encodes using the binary segment mode, not any text mode. The maximum number of
-     * bytes allowed is 2953. The smallest possible QR Code version is automatically chosen for the output.
-     * The ECC level of the result may be higher than the ecl argument if it can be done without increasing the version.
-     * @param data the binary data to encode (not {@code null})
-     * @param ecl the error correction level to use (not {@code null}) (boostable)
-     * @return a QR Code (not {@code null}) representing the data
-     * @throws NullPointerException if the data or error correction level is {@code null}
-     * @throws DataTooLongException if the data fails to fit in the
-     * largest version QR Code at the ECL, which means it is too long
-     */
-    public static QrCode encodeBinary(byte[] data, Ecc ecl) {
-        Objects.requireNonNull(data);
-        Objects.requireNonNull(ecl);
-        QrSegment seg = QrSegment.makeBytes(data);
-        return encodeSegments(Arrays.asList(seg), ecl);
-    }
-
 
     /*---- Static factory functions (mid level) ----*/
 
