@@ -1,8 +1,8 @@
-package io.github.dector.quark.exporters.ascii
+package io.github.dector.quark.ascii
 
-import io.github.dector.quark.qr.QrCode
-import io.github.dector.quark.qr.size
-import io.github.dector.quark.qr.sizeWithBorder
+import io.github.dector.quark.QrCode
+import io.github.dector.quark.size
+import io.github.dector.quark.sizeWithBorder
 
 fun QrCode.toAscii(border: Int = 4, filledPixel: Char = '█', emptyPixel: Char = ' '): String {
     val widthOrHeight = sizeWithBorder(border)

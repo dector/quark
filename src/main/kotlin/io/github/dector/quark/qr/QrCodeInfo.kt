@@ -27,12 +27,14 @@
 
 package io.github.dector.quark.qr
 
+import io.github.dector.quark.QrCode
 import io.github.dector.quark.qr.QrConstants.MAX_VERSION
 import io.github.dector.quark.qr.QrConstants.MIN_VERSION
 import io.github.dector.quark.qr.QrConstants.PENALTY_N1
 import io.github.dector.quark.qr.QrConstants.PENALTY_N2
 import io.github.dector.quark.qr.QrConstants.PENALTY_N3
 import io.github.dector.quark.qr.QrConstants.PENALTY_N4
+import io.github.dector.quark.size
 import java.util.Arrays
 import java.util.Objects
 

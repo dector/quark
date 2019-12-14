@@ -28,7 +28,7 @@
 package io.github.dector.quark.exporters.svg
 
 import io.github.dector.quark.qr.QrCodeInfo
-import io.github.dector.quark.qr.size
+import io.github.dector.quark.size
 
 object SvgExporter {
 

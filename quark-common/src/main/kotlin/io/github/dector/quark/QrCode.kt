@@ -1,4 +1,4 @@
-package io.github.dector.quark.qr
+package io.github.dector.quark
 
 interface QrCode {
 

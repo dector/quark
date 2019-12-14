@@ -27,9 +27,9 @@
 
 package io.github.dector.quark.exporters.image
 
-import io.github.dector.quark.qr.QrCode
-import io.github.dector.quark.qr.size
-import io.github.dector.quark.qr.sizeWithBorder
+import io.github.dector.quark.QrCode
+import io.github.dector.quark.size
+import io.github.dector.quark.sizeWithBorder
 import java.awt.Color
 import java.awt.image.BufferedImage
 

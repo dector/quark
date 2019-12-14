@@ -8,6 +8,9 @@ dependencies {
     implementation(kotlin("stdlib-jdk8"))
     implementation(Deps.kotlin_coroutines)
 
+    implementation(project(":quark-common"))
+    implementation(project(":renderer-ascii"))
+
     testImplementation(Deps.kotlin_test)
 }
 
