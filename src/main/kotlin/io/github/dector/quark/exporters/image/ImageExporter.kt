@@ -28,6 +28,7 @@
 package io.github.dector.quark.exporters.image
 
 import io.github.dector.quark.qr.QrCode
+import java.awt.Color
 import java.awt.image.BufferedImage
 
 object ImageExporter {
@@ -47,19 +48,34 @@ object ImageExporter {
      * @throws IllegalArgumentException if the scale or border is out of range, or if
      * {scale, border, size} cause the image dimensions to exceed Integer.MAX_VALUE
      */
-    fun exportToImage(qr: QrCode, scale: Int, border: Int): BufferedImage {
-        require(!(scale <= 0 || border < 0)) { "Value out of range" }
+    fun exportToImage(qr: QrCode, scale: Int = 8, border: Int): BufferedImage {
+        require(scale > 0) { "Scale should be positive" }
+        require(border >= 0) { "Border count should be non-negative" }
         require(!(border > Int.MAX_VALUE / 2 || qr.size + border * 2L > Int.MAX_VALUE / scale)) { "Scale or border too large" }
 
-        val result = BufferedImage((qr.size + border * 2) * scale, (qr.size + border * 2) * scale, BufferedImage.TYPE_INT_RGB)
+        val image = run {
+            val widthOrHeight = (qr.size + border * 2) * scale
+            BufferedImage(widthOrHeight, widthOrHeight, BufferedImage.TYPE_BYTE_BINARY)
+        }
 
-        for (y in 0 until result.height) {
-            for (x in 0 until result.width) {
-                val color = qr.getModule(x / scale - border, y / scale - border)
-                result.setRGB(x, y, if (color) 0x000000 else 0xFFFFFF)
+        run {
+            val g = image.createGraphics().apply {
+                color = Color.WHITE
+                fillRect(0, 0, image.width, image.height)
+            }
+
+            (0..qr.size).forEach { i ->
+                (0..qr.size).forEach { j ->
+                    val x = (i + border) * scale
+                    val y = (j + border) * scale
+                    val color = if (qr.getModule(i, j)) Color.BLACK else Color.WHITE
+
+                    g.color = color
+                    g.fillRect(x, y, scale, scale)
+                }
             }
         }
 
-        return result
+        return image
     }
 }
