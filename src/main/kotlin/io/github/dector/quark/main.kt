@@ -1,6 +1,7 @@
 package io.github.dector.project
 
 import io.nayuki.qrcodegen.QrCode
+import java.io.File
 import javax.imageio.ImageIO
 
 fun main() {
