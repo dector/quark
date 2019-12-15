@@ -27,7 +27,8 @@
 
 package io.github.dector.quark.qr
 
-import io.github.dector.quark.Constants
+import io.github.dector.quark.Constants.MAX_VERSION
+import io.github.dector.quark.Constants.MIN_VERSION
 import io.github.dector.quark.ErrorCorrectionLevel
 import io.github.dector.quark.QrCode
 import io.github.dector.quark.utils.parseBit
@@ -37,36 +38,33 @@ import kotlin.math.abs
 import kotlin.math.max
 
 class QrGenerator(
-    val version: Int,
-    val errorCorrectionLevel: ErrorCorrectionLevel,
-    val requestedMask: Int,
-    val dataCodewords: ByteArray
+    private val config: Config,
+    private val requestedMask: Int // TODO make it sealed and move into Config
 ) {
 
-    init { // Check arguments and initialize fields
-        require(version in Constants.MIN_VERSION..Constants.MAX_VERSION) { "Version value out of range" }
+    init {
+        require(config.version in MIN_VERSION..MAX_VERSION) { "Version value out of range" }
         require(requestedMask == -1 || requestedMask in 0..7) { "Mask value out of range" }
     }
 
-    private val size = version * 4 + 17
-
     private var selectedMask = requestedMask
 
+    private val size = config.version * 4 + 17
     private val canvas = SquareField(size)
     private val canvasMask = SquareField(size)
 
-    operator fun invoke(): QrCode {
+    operator fun invoke(dataCodewords: ByteArray): QrCode {
         // Compute ECC, draw modules, do masking
-        fillFunctionPattern(version, errorCorrectionLevel, canvas, canvasMask)
+        fillFunctionPattern(config, canvas, canvasMask)
 
-        fillCodewords(version, errorCorrectionLevel, dataCodewords, canvas, canvasMask)
-        selectedMask = detectAndFillMask(requestedMask, errorCorrectionLevel, canvas, canvasMask)
+        fillCodewords(config, dataCodewords, canvas, canvasMask)
+        selectedMask = detectAndFillMask(requestedMask, config.correctionLevel, canvas, canvasMask)
 
         return getGenerated()
     }
 
     private fun getGenerated(): QrCode {
-        val version = this.version
+        val version = this.config.version
         val canvas = this.canvas
 
         return object : QrCode {
@@ -74,9 +72,14 @@ class QrGenerator(
             override fun get(x: Int, y: Int) = canvas[x, y]
         }
     }
+
+    data class Config(
+        val version: Int,
+        val correctionLevel: ErrorCorrectionLevel
+    )
 }
 
-private fun fillFunctionPattern(version: Int, correctionLevel: ErrorCorrectionLevel, canvas: SquareField, canvasMask: SquareField) {
+private fun fillFunctionPattern(config: QrGenerator.Config, canvas: SquareField, canvasMask: SquareField) {
     val size = canvas.size
 
     // Draws a 9*9 finder pattern including the border separator,
@@ -109,25 +112,30 @@ private fun fillFunctionPattern(version: Int, correctionLevel: ErrorCorrectionLe
     // Returns an ascending list of positions of alignment patterns for this version number.
     // Each position is in the range [0,177), and are used on both the x and y axes.
     // This could be implemented as lookup table of 40 variable-length lists of unsigned bytes.
-    fun getAlignmentPatternPositions(): IntArray = if (version == 1) intArrayOf() else {
-        val numAlign = version / 7 + 2
-        val step: Int
-        step = if (version == 32) // Special snowflake
-            26 else  // step = ceil[(size - 13) / (numAlign*2 - 2)] * 2
-            (version * 4 + numAlign * 2 + 1) / (numAlign * 2 - 2) * 2
-        val result = IntArray(numAlign)
-        result[0] = 6
-        var i = result.size - 1
-        var pos = size - 7
-        while (i >= 1) {
-            result[i] = pos
-            i--
-            pos -= step
+    fun getAlignmentPatternPositions(): IntArray {
+        val version = config.version
+
+        return if (version == 1) {
+            intArrayOf() // Draw horizontal and vertical timing patterns
+        } else {
+            val numAlign = version / 7 + 2
+            val step: Int
+            step = if (version == 32) // Special snowflake
+                26 else  // step = ceil[(size - 13) / (numAlign*2 - 2)] * 2
+                (version * 4 + numAlign * 2 + 1) / (numAlign * 2 - 2) * 2
+            val result = IntArray(numAlign)
+            result[0] = 6
+            var i = result.size - 1
+            var pos = size - 7
+            while (i >= 1) {
+                result[i] = pos
+                i--
+                pos -= step
+            }
+            result
         }
-        result
     }
 
-    // Draw horizontal and vertical timing patterns
     for (i in 0 until size) {
         setFunctionModule(6, i, i % 2 == 0, canvas, canvasMask)
         setFunctionModule(i, 6, i % 2 == 0, canvas, canvasMask)
@@ -148,6 +156,8 @@ private fun fillFunctionPattern(version: Int, correctionLevel: ErrorCorrectionLe
     // Draws two copies of the version bits (with its own error correction code),
     // based on this object's version field, iff 7 <= version <= 40.
     fun drawVersion() {
+        val version = config.version
+
         if (version < 7) return
 
         // Calculate error correction code and pack bits
@@ -167,12 +177,12 @@ private fun fillFunctionPattern(version: Int, correctionLevel: ErrorCorrectionLe
     }
 
     // Draw configuration data
-    drawFormatBits(0, correctionLevel, canvas, canvasMask) // Dummy mask value; overwritten later in the constructor
+    drawFormatBits(0, config.correctionLevel, canvas, canvasMask) // Dummy mask value; overwritten later in the constructor
     drawVersion()
 }
 
-private fun fillCodewords(version: Int, correctionLevel: ErrorCorrectionLevel, dataCodewords: ByteArray, canvas: SquareField, canvasMask: SquareField) {
-    val allCodewords = addEccAndInterleave(version, correctionLevel, dataCodewords)
+private fun fillCodewords(config: QrGenerator.Config, dataCodewords: ByteArray, canvas: SquareField, canvasMask: SquareField) {
+    val allCodewords = addEccAndInterleave(config, dataCodewords)
 
     val size = canvas.size
 
@@ -180,7 +190,7 @@ private fun fillCodewords(version: Int, correctionLevel: ErrorCorrectionLevel, d
     // data area of this QR Code. Function modules need to be marked off before this is called.
     fun drawCodewords(data: ByteArray) {
         Objects.requireNonNull(data)
-        require(data.size == getNumRawDataModules(version) / 8)
+        require(data.size == getNumRawDataModules(config.version) / 8)
         var i = 0 // Bit index into the data
 
         // Do the funny zigzag scan
@@ -212,14 +222,13 @@ private fun fillCodewords(version: Int, correctionLevel: ErrorCorrectionLevel, d
 
 // Returns a new byte string representing the given data with the appropriate error correction
 // codewords appended to it, based on this object's version and error correction level.
-private fun addEccAndInterleave(version: Int, correctionLevel: ErrorCorrectionLevel, data: ByteArray): ByteArray {
-    Objects.requireNonNull(data)
-    require(data.size == getNumDataCodewords(version, correctionLevel))
+private fun addEccAndInterleave(config: QrGenerator.Config, data: ByteArray): ByteArray {
+    require(data.size == getNumDataCodewords(config.version, config.correctionLevel))
 
     // Calculate parameter numbers
-    val numBlocks = QrTables.NUM_ERROR_CORRECTION_BLOCKS[correctionLevel.ordinal][version].toInt()
-    val blockEccLen = QrTables.ECC_CODEWORDS_PER_BLOCK[correctionLevel.ordinal][version].toInt()
-    val rawCodewords = getNumRawDataModules(version) / 8
+    val numBlocks = QrTables.NUM_ERROR_CORRECTION_BLOCKS[config.correctionLevel.ordinal][config.version].toInt()
+    val blockEccLen = QrTables.ECC_CODEWORDS_PER_BLOCK[config.correctionLevel.ordinal][config.version].toInt()
+    val rawCodewords = getNumRawDataModules(config.version) / 8
     val numShortBlocks = numBlocks - rawCodewords % numBlocks
     val shortBlockLen = rawCodewords / numBlocks
 

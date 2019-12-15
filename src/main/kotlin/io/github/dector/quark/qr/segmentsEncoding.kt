@@ -27,7 +27,8 @@
 
 package io.github.dector.quark.qr
 
-import io.github.dector.quark.Constants
+import io.github.dector.quark.Constants.MAX_VERSION
+import io.github.dector.quark.Constants.MIN_VERSION
 import io.github.dector.quark.ErrorCorrectionLevel
 import io.github.dector.quark.QrCode
 import io.github.dector.quark.qr.QrTables.ECC_CODEWORDS_PER_BLOCK
@@ -54,7 +55,7 @@ import kotlin.math.min
  * @throws DataTooLongException if the segments fail to fit in the largest version QR Code at the ECL, which means they are too long
  */
 fun encodeSegments(segments: List<QrSegment>, correctionLevel: ErrorCorrectionLevel): QrCode {
-    return encodeSegments(segments, correctionLevel, Constants.MIN_VERSION, Constants.MAX_VERSION, -1, true)
+    return encodeSegments(segments, correctionLevel, MIN_VERSION, MAX_VERSION, -1, true)
 }
 
 /**
@@ -71,7 +72,7 @@ fun encodeSegments(segments: List<QrSegment>, correctionLevel: ErrorCorrectionLe
  * This is a mid-level API; the high-level API is [QrEncoder.encodeText] and [QrEncoder.encodeBinary].
  *
  * @param segments the segments to encode
- * @param correctionLevel the error correction level to use  (boostable)
+ * @param minimalCorrectionLevel the error correction level to use  (boostable)
  * @param minVersion the minimum allowed version of the QR Code (at least 1)
  * @param maxVersion the maximum allowed version of the QR Code (at most 40)
  * @param mask the mask number to use (between 0 and 7 (inclusive)), or -1 for automatic mask
@@ -82,26 +83,26 @@ fun encodeSegments(segments: List<QrSegment>, correctionLevel: ErrorCorrectionLe
  * @throws IllegalArgumentException if 1 &#x2264; minVersion &#x2264; maxVersion &#x2264; 40 or &#x2212;1 &#x2264; mask &#x2264; 7 is violated
  * @throws DataTooLongException if the segments fail to fit in the maxVersion QR Code at the ECL, which means they are too long
  */
-fun encodeSegments(segments: List<QrSegment>, correctionLevel: ErrorCorrectionLevel, minVersion: Int, maxVersion: Int, mask: Int, boostEcl: Boolean): QrCode {
-    require(minVersion in Constants.MIN_VERSION..maxVersion)
-    require(maxVersion in minVersion..Constants.MAX_VERSION)
+fun encodeSegments(segments: List<QrSegment>, minimalCorrectionLevel: ErrorCorrectionLevel, minVersion: Int, maxVersion: Int, mask: Int, boostEcl: Boolean): QrCode {
+    require(minVersion in MIN_VERSION..maxVersion)
+    require(maxVersion in minVersion..MAX_VERSION)
     require(mask in -1..7)
 
-    var ecl = correctionLevel
+    var correctionLevel = minimalCorrectionLevel
 
     // Find the minimal version number to use
-    val version = calculateVersion(segments, minVersion, maxVersion, ecl)
+    val version = calculateVersion(segments, minVersion, maxVersion, correctionLevel)
     val dataUsedBits = getTotalBits(segments, version)
 
     // Increase the error correction level while the data still fits in the current version number
     if (boostEcl) {
         val newEcl = ErrorCorrectionLevel.values()
             .sortedBy { it.errorsTolerancePercent }
-            .dropWhile { it != ecl }
+            .dropWhile { it != correctionLevel }
             .lastOrNull { dataUsedBits <= getNumDataCodewords(version, it) * 8 }
 
         if (newEcl != null) {
-            ecl = newEcl
+            correctionLevel = newEcl
         }
     }
 
@@ -113,15 +114,15 @@ fun encodeSegments(segments: List<QrSegment>, correctionLevel: ErrorCorrectionLe
             appendData(segment.data)
         }
     }
-    assert(bb.size == dataUsedBits)
+    check(bb.size == dataUsedBits)
 
     // Add terminator and pad up to a byte if applicable
-    val dataCapacityBits = getNumDataCodewords(version, ecl) * 8
-    assert(bb.size <= dataCapacityBits)
+    val dataCapacityBits = getNumDataCodewords(version, correctionLevel) * 8
+    check(bb.size <= dataCapacityBits)
 
     bb.appendBits(0, min(4, dataCapacityBits - bb.size))
     bb.appendBits(0, (8 - bb.size % 8) % 8)
-    assert(bb.size % 8 == 0)
+    check(bb.size % 8 == 0)
 
     // Pad with alternating bytes until data capacity is reached
     var padByte = 0xEC
@@ -137,7 +138,7 @@ fun encodeSegments(segments: List<QrSegment>, correctionLevel: ErrorCorrectionLe
     }
 
     // Create the QR Code object
-    return QrGenerator(version, ecl, mask, dataCodewords).invoke()
+    return QrGenerator(QrGenerator.Config(version, correctionLevel), mask).invoke(dataCodewords)
 }
 
 private fun calculateVersion(segments: List<QrSegment>, minVersion: Int, maxVersion: Int, correctionLevel: ErrorCorrectionLevel): Int {
@@ -163,22 +164,22 @@ private fun calculateVersion(segments: List<QrSegment>, minVersion: Int, maxVers
             throw DataTooLongException(msg)
         }
     }
-    assert(dataUsedBits != -1)
+    check(dataUsedBits != -1)
 
     return version
 }
 
-fun getNumDataCodewords(ver: Int, correctionLevel: ErrorCorrectionLevel): Int =
-    (getNumRawDataModules(ver) / 8) -
-        (ECC_CODEWORDS_PER_BLOCK[correctionLevel.ordinal][ver] * NUM_ERROR_CORRECTION_BLOCKS[correctionLevel.ordinal][ver])
+fun getNumDataCodewords(version: Int, correctionLevel: ErrorCorrectionLevel): Int =
+    (getNumRawDataModules(version) / 8) -
+        (ECC_CODEWORDS_PER_BLOCK[correctionLevel.ordinal][version] * NUM_ERROR_CORRECTION_BLOCKS[correctionLevel.ordinal][version])
 
 // Returns the number of data bits that can be stored in a QR Code of the given version number, after
 // all function modules are excluded. This includes remainder bits, so it might not be a multiple of 8.
 // The result is in the range [208, 29648]. This could be implemented as a 40-entry lookup table.
-fun getNumRawDataModules(ver: Int): Int {
-    require(!(ver < Constants.MIN_VERSION || ver > Constants.MAX_VERSION)) { "Version number out of range" }
+fun getNumRawDataModules(version: Int): Int {
+    require(version in MIN_VERSION..MAX_VERSION) { "Version number out of range" }
 
-    val size = ver * 4 + 17
+    val size = version * 4 + 17
     var result = size * size // Number of modules in the whole QR Code square
 
     result -= 8 * 8 * 3 // Subtract the three finders with separators
@@ -186,16 +187,16 @@ fun getNumRawDataModules(ver: Int): Int {
     result -= (size - 16) * 2 // Subtract the timing patterns (excluding finders)
 
     // The five lines above are equivalent to: int result = (16 * ver + 128) * ver + 64;
-    if (ver >= 2) {
-        val numAlign = ver / 7 + 2
+    if (version >= 2) {
+        val numAlign = version / 7 + 2
         result -= (numAlign - 1) * (numAlign - 1) * 25 // Subtract alignment patterns not overlapping with timing patterns
         result -= (numAlign - 2) * 2 * 20 // Subtract alignment patterns that overlap with timing patterns
 
         // The two lines above are equivalent to: result -= (25 * numAlign - 10) * numAlign - 55;
-        if (ver >= 7) result -= 6 * 3 * 2 // Subtract version information
+        if (version >= 7) result -= 6 * 3 * 2 // Subtract version information
     }
 
-    assert(result in 208..29648)
+    check(result in 208..29648)
 
     return result
 }
