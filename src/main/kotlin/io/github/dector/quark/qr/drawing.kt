@@ -1,5 +1,6 @@
 package io.github.dector.quark.qr
 
+import io.github.dector.quark.ErrorCorrectionLevel
 import io.github.dector.quark.utils.parseBit
 import io.github.dector.quark.utils.withGrid
 import kotlin.math.abs
@@ -118,4 +119,51 @@ fun Layer.drawVersion(version: Int) {
         setAndProtect(a, b, bit)
         setAndProtect(b, a, bit)
     }
+}
+
+// Format bits
+
+fun Layer.drawFormatBits(correctionLevel: ErrorCorrectionLevel, mask: Int = 0) {
+    // Draws two copies of the format bits (with its own error correction code)
+    // based on the given mask and this object's error correction level field.
+
+    // Calculate error correction code and pack bits
+    val bits = run {
+        val data = correctionLevel.formatBits shl 3 or mask // errCorrLvl is uint2, mask is uint3
+        var rem = data
+
+        repeat(10) {
+            rem = rem shl 1 xor (rem ushr 9) * 0x537
+        }
+
+        data shl 10 or rem xor 0x5412 // uint15
+    }
+
+    check(bits ushr 15 == 0)
+
+    // Draw first copy
+    (0..14).forEach { i ->
+        val (x, y) = when (i) {
+            in 0..5 -> 8 to i
+            6 -> 8 to 7
+            7 -> 8 to 8
+            8 -> 7 to 8
+            in 9..14 -> (14 - i) to 8
+            else -> error("")
+        }
+
+        setAndProtect(x, y, isFilled = bits.parseBit(i))
+    }
+
+    (0..14).forEach { i ->
+        val (x, y) = when (i) {
+            in 0..7 -> (size - 1 - i) to 8
+            in 8..14 -> 8 to (size - 15 + i)
+            else -> error("")
+        }
+
+        setAndProtect(x, y, isFilled = bits.parseBit(i))
+    }
+
+    setAndProtect(8, size - 8, isFilled = true) // Always filled
 }

@@ -56,8 +56,8 @@ class QrGenerator(
     operator fun invoke(dataCodewords: ByteArray): QrCode {
         fillFunctionPattern(layer, config)
 
-//        fillCodewords(layer, config, dataCodewords)
-//        selectedMask = detectAndFillMask(layer, requestedMask, config.correctionLevel)
+        fillCodewords(layer, config, dataCodewords)
+        selectedMask = detectAndFillMask(layer, requestedMask, config.correctionLevel)
 
         return getGenerated()
     }
@@ -80,10 +80,7 @@ private fun fillFunctionPattern(layer: Layer, config: QrGenerator.Config) {
     layer.drawTimingPattern()
     layer.drawFinderPattern()
     layer.drawAlignmentPattern(config.version)
-
-    // Draw configuration data
-    drawFormatBits(0, config.correctionLevel, layer) // Dummy mask value; overwritten later in the constructor
-
+    layer.drawFormatBits(config.correctionLevel)
     layer.drawVersion(config.version)
 }
 
