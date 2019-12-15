@@ -58,7 +58,7 @@ fun makeSegments(text: String): List<QrSegment> = when {
 fun makeNumeric(digits: String): QrSegment {
     require(NUMERIC_REGEX.matcher(digits).matches()) { "String contains non-numeric characters" }
 
-    val bb = BitBuffer()
+    val bb = BitBuffer.create()
 
     var i = 0
     while (i < digits.length) {
@@ -85,7 +85,7 @@ fun makeNumeric(digits: String): QrSegment {
 fun makeAlphanumeric(text: String): QrSegment {
     require(ALPHANUMERIC_REGEX.matcher(text).matches()) { "String contains unencodable characters in alphanumeric mode" }
 
-    val bb = BitBuffer()
+    val bb = BitBuffer.create()
 
     var i = 0
     while (i <= text.length - 2) {
@@ -114,7 +114,7 @@ fun makeAlphanumeric(text: String): QrSegment {
  * @return a segment containing the data
  */
 fun makeBytes(data: ByteArray): QrSegment {
-    val buffer = BitBuffer()
+    val buffer = BitBuffer.create()
     for (byte in data) {
         val bits = byte.toInt() and 0xFF
         buffer.appendBits(bits, 8)

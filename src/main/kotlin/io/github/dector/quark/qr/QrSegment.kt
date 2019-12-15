@@ -41,9 +41,9 @@ package io.github.dector.quark.qr
  * This class can represent kanji mode segments, but provides no help in encoding them
  * - see [io.nayuki.qrcodegen.advanced.QrSegmentAdvanced] for full kanji support.
  */
-class QrSegment(
+data class QrSegment(
     /**
-     * The mode indicator of this segment. Not `null`.
+     * The mode indicator of this segment.
      */
     val mode: Mode,
     /**
@@ -52,7 +52,7 @@ class QrSegment(
      * Always zero or positive. Not the same as the data's bit length.
      */
     val numChars: Int,
-    // The data bits of this segment. Not null. Accessed through copyData().
+    // The data bits of this segment
     val data: BitBuffer
 ) {
 
@@ -69,15 +69,6 @@ class QrSegment(
      */
     init {
         require(numChars >= 0)
-    }
-
-    /**
-     * Returns the data bits of this segment.
-     *
-     * @return a new copy of the data bits
-     */
-    fun copyData(): BitBuffer {
-        return data.clone() // Make defensive copy
     }
 
     /**

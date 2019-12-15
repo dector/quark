@@ -24,7 +24,7 @@
 
 package io.nayuki.qrcodegen.advanced;
 
-import io.github.dector.quark.qr.BitBuffer;
+import io.github.dector.quark.qr.RealBitBuffer;
 import io.github.dector.quark.qr.DataTooLongException;
 import io.github.dector.quark.qr.ErrorCorrectionLevel;
 import io.github.dector.quark.qr.QrConstants;
@@ -260,7 +260,7 @@ public final class QrSegmentAdvanced {
      */
     public static QrSegment makeKanji(String text) {
         Objects.requireNonNull(text);
-        BitBuffer bb = new BitBuffer();
+        RealBitBuffer bb = new RealBitBuffer();
         text.chars().forEachOrdered(c -> {
             int val = UNICODE_TO_QR_KANJI[c];
             if (val == -1)

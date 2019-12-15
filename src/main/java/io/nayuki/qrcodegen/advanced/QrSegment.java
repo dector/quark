@@ -23,7 +23,7 @@
 
 package io.nayuki.qrcodegen.advanced;
 
-import io.github.dector.quark.qr.BitBuffer;
+import io.github.dector.quark.qr.RealBitBuffer;
 import io.github.dector.quark.qr.QrConstants;
 import java.util.List;
 import java.util.Objects;
@@ -36,7 +36,7 @@ import java.util.regex.Pattern;
  * <p>The mid-level way to create a segment is to take the payload data and call a
  * static factory function such as {@link QrSegment#makeNumeric(String)}. The low-level
  * way to create a segment is to custom-make the bit buffer and call the {@link
- * QrSegment#QrSegment(Mode,int, BitBuffer) constructor} with appropriate values.</p>
+ * QrSegment#QrSegment(Mode,int, RealBitBuffer) constructor} with appropriate values.</p>
  * <p>This segment class imposes no length restrictions, but QR Codes have restrictions.
  * Even in the most favorable conditions, a QR Code can only hold 7089 characters of data.
  * Any segment longer than this is meaningless for the purpose of generating QR Codes.
@@ -58,7 +58,7 @@ public final class QrSegment {
      */
     public static QrSegment makeBytes(byte[] data) {
         Objects.requireNonNull(data);
-        BitBuffer bb = new BitBuffer();
+        RealBitBuffer bb = new RealBitBuffer();
         for (byte b : data)
             bb.appendBits(b & 0xFF, 8);
         return new QrSegment(Mode.BYTE, data.length, bb);
@@ -77,7 +77,7 @@ public final class QrSegment {
         if (!NUMERIC_REGEX.matcher(digits).matches())
             throw new IllegalArgumentException("String contains non-numeric characters");
 
-        BitBuffer bb = new BitBuffer();
+        RealBitBuffer bb = new RealBitBuffer();
         for (int i = 0; i < digits.length(); ) {  // Consume up to 3 digits per iteration
             int n = Math.min(digits.length() - i, 3);
             bb.appendBits(Integer.parseInt(digits.substring(i, i + n)), n * 3 + 1);
@@ -101,7 +101,7 @@ public final class QrSegment {
         if (!ALPHANUMERIC_REGEX.matcher(text).matches())
             throw new IllegalArgumentException("String contains unencodable characters in alphanumeric mode");
 
-        BitBuffer bb = new BitBuffer();
+        RealBitBuffer bb = new RealBitBuffer();
         int i;
         for (i = 0; i <= text.length() - 2; i += 2) {  // Process groups of 2
             int temp = ALPHANUMERIC_CHARSET.indexOf(text.charAt(i)) * 45;
@@ -121,7 +121,7 @@ public final class QrSegment {
      * @throws IllegalArgumentException if the value is outside the range [0, 10<sup>6</sup>)
      */
     public static QrSegment makeEci(int assignVal) {
-        BitBuffer bb = new BitBuffer();
+        RealBitBuffer bb = new RealBitBuffer();
         if (assignVal < 0)
             throw new IllegalArgumentException("ECI assignment value out of range");
         else if (assignVal < (1 << 7))
@@ -150,7 +150,7 @@ public final class QrSegment {
     public final int numChars;
 
     // The data bits of this segment. Not null. Accessed through getData().
-    final BitBuffer data;
+    final RealBitBuffer data;
 
 
     /*---- Constructor (low level) ----*/
@@ -165,7 +165,7 @@ public final class QrSegment {
      * @throws NullPointerException if the mode or data is {@code null}
      * @throws IllegalArgumentException if the character count is negative
      */
-    public QrSegment(Mode md, int numCh, BitBuffer data) {
+    public QrSegment(Mode md, int numCh, RealBitBuffer data) {
         mode = Objects.requireNonNull(md);
         Objects.requireNonNull(data);
         if (numCh < 0)
@@ -181,7 +181,7 @@ public final class QrSegment {
      * Returns the data bits of this segment.
      * @return a new copy of the data bits (not {@code null})
      */
-    public BitBuffer getData() {
+    public RealBitBuffer getData() {
         return data.clone();  // Make defensive copy
     }
 
@@ -197,7 +197,7 @@ public final class QrSegment {
             int ccbits = seg.mode.numCharCountBits(version);
             if (seg.numChars >= (1 << ccbits))
                 return -1;  // The segment's length doesn't fit the field's bit width
-            result += 4L + ccbits + seg.data.bitLength();
+            result += 4L + ccbits + seg.data.getBitLength();
             if (result > Integer.MAX_VALUE)
                 return -1;  // The sum will overflow an int type
         }
