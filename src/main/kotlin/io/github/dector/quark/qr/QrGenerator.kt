@@ -50,13 +50,8 @@ class QrGenerator(
 
     private lateinit var selectedMask: Pair<Int, Unit>
 
-    // Private grids of modules/pixels, with dimensions of size*size:
-    // The modules of this QR Code (false = white, true = black).
-    // Immutable after constructor finishes. Accessed through getModule().
-    private val modules: Array<BooleanArray> = Array(size) { BooleanArray(size) } // Initially all white
-
-    // Indicates function modules that are not subjected to masking. Discarded when constructor finishes.
-    private val functionModules: Array<BooleanArray>? = Array(size) { BooleanArray(size) }
+    private val canvas = SquareField(size)
+    private val canvasMask = SquareField(size)
 
     operator fun invoke(): QrCode {
         // Compute ECC, draw modules, do masking
@@ -70,11 +65,11 @@ class QrGenerator(
 
     private fun getGenerated(): QrCode {
         val version = this.version
-        val modules = this.modules
+        val canvas = this.canvas
 
         return object : QrCode {
             override val version = version
-            override fun get(x: Int, y: Int) = modules[y][x]
+            override fun get(x: Int, y: Int) = canvas[x, y]
         }
     }
 
@@ -168,8 +163,8 @@ class QrGenerator(
     // Sets the color of a module and marks it as a function module.
     // Only used by the constructor. Coordinates must be in bounds.
     private fun setFunctionModule(x: Int, y: Int, isBlack: Boolean) {
-        modules[y][x] = isBlack
-        functionModules!![y][x] = true
+        canvas[x, y] = isBlack
+        canvasMask[x, y] = true
     }
 
     // Returns a new byte string representing the given data with the appropriate error correction
@@ -237,8 +232,8 @@ class QrGenerator(
                     val x = right - j // Actual x coordinate
                     val upward = right + 1 and 2 == 0
                     val y = if (upward) size - 1 - vert else vert // Actual y coordinate
-                    if (!functionModules!![y][x] && i < data.size * 8) {
-                        modules[y][x] = data[i ushr 3].toInt().parseBit(7 - (i and 7))
+                    if (!canvasMask[x, y] && i < data.size * 8) {
+                        canvas[x, y] = data[i ushr 3].toInt().parseBit(7 - (i and 7))
                         i++
                     }
                     // If this QR Code has any remainder bits (0 to 7), they were assigned as
@@ -270,7 +265,7 @@ class QrGenerator(
                     7 -> ((x + y) % 2 + x * y % 3) % 2 == 0
                     else -> throw AssertionError()
                 }
-                modules[y][x] = modules[y][x] xor (invert and !functionModules!![y][x])
+                canvas[x, y] = canvas[x, y] xor (invert and !canvasMask[x, y])
             }
         }
     }
@@ -324,14 +319,14 @@ class QrGenerator(
             Arrays.fill(runHistory, 0)
             var padRun = size // Add white border to initial run
             for (x in 0 until size) {
-                if (modules[y][x] == runColor) {
+                if (canvas[x, y] == runColor) {
                     runX++
                     if (runX == 5) result += PENALTY_N1 else if (runX > 5) result++
                 } else {
                     finderPenaltyAddHistory(runX + padRun, runHistory)
                     padRun = 0
                     if (!runColor) result += finderPenaltyCountPatterns(runHistory) * PENALTY_N3
-                    runColor = modules[y][x]
+                    runColor = canvas[x, y]
                     runX = 1
                 }
             }
@@ -345,14 +340,14 @@ class QrGenerator(
             Arrays.fill(runHistory, 0)
             var padRun = size // Add white border to initial run
             for (y in 0 until size) {
-                if (modules[y][x] == runColor) {
+                if (canvas[x, y] == runColor) {
                     runY++
                     if (runY == 5) result += PENALTY_N1 else if (runY > 5) result++
                 } else {
                     finderPenaltyAddHistory(runY + padRun, runHistory)
                     padRun = 0
                     if (!runColor) result += finderPenaltyCountPatterns(runHistory) * PENALTY_N3
-                    runColor = modules[y][x]
+                    runColor = canvas[x, y]
                     runY = 1
                 }
             }
@@ -362,16 +357,16 @@ class QrGenerator(
         // 2*2 blocks of modules having same color
         for (y in 0 until size - 1) {
             for (x in 0 until size - 1) {
-                val color = modules[y][x]
-                if (color == modules[y][x + 1] && color == modules[y + 1][x] && color == modules[y + 1][x + 1]) result += PENALTY_N2
+                val color = canvas[x, y]
+                if (color == canvas[x + 1, y] && color == canvas[x, y + 1] && color == canvas[x + 1, y + 1]) result += PENALTY_N2
             }
         }
 
         // Balance of black and white modules
         var black = 0
-        for (row in modules) {
-            for (color in row) {
-                if (color) black++
+        (0 until canvas.size).forEach { x ->
+            (0 until canvas.size).forEach { y ->
+                if (canvas[x, y]) black++
             }
         }
         val total = size * size // Note that size is odd, so black/total != 1/2
@@ -435,3 +430,18 @@ private const val PENALTY_N1 = 3
 private const val PENALTY_N2 = 3
 private const val PENALTY_N3 = 40
 private const val PENALTY_N4 = 10
+
+private class SquareField(val size: Int) {
+
+    init {
+        require(size > 0)
+    }
+
+    private val data = Array(size) { BooleanArray(size) }
+
+    operator fun set(x: Int, y: Int, value: Boolean) {
+        data[x][y] = value
+    }
+
+    operator fun get(x: Int, y: Int): Boolean = data[x][y]
+}
