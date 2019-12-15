@@ -25,9 +25,8 @@
  *   Software.
  */
 
-package io.github.dector.quark.util
+package io.github.dector.quark.utils
 
-import io.github.dector.quark.qr.parseBit
 import java.util.BitSet
 
 interface BitBuffer {

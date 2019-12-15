@@ -29,11 +29,6 @@ package io.github.dector.quark.qr
 
 import kotlin.experimental.xor
 
-// Returns true iff the i'th bit of x is set to 1.
-fun getBit(x: Int, i: Int): Boolean {
-    return x ushr i and 1 != 0
-}
-
 // Pushes the given value to the front and drops the last value. A helper function for getPenaltyScore().
 fun finderPenaltyAddHistory(currentRunLength: Int, runHistory: IntArray) {
     System.arraycopy(runHistory, 0, runHistory, 1, runHistory.size - 1)

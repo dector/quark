@@ -27,10 +27,12 @@
 
 package io.github.dector.quark.qr
 
-import io.github.dector.quark.qr.Constants.ECC_CODEWORDS_PER_BLOCK
-import io.github.dector.quark.qr.Constants.NUM_ERROR_CORRECTION_BLOCKS
-import io.github.dector.quark.util.BitBuffer
-import io.github.dector.quark.util.create
+import io.github.dector.quark.Constants
+import io.github.dector.quark.ErrorCorrectionLevel
+import io.github.dector.quark.qr.QrTables.ECC_CODEWORDS_PER_BLOCK
+import io.github.dector.quark.qr.QrTables.NUM_ERROR_CORRECTION_BLOCKS
+import io.github.dector.quark.utils.BitBuffer
+import io.github.dector.quark.utils.create
 import kotlin.math.min
 
 /**
@@ -51,7 +53,7 @@ import kotlin.math.min
  * @throws DataTooLongException if the segments fail to fit in the largest version QR Code at the ECL, which means they are too long
  */
 fun encodeSegments(segments: List<QrSegment>, correctionLevel: ErrorCorrectionLevel): QrCodeInfo {
-    return encodeSegments(segments, correctionLevel, QrConstants.MIN_VERSION, QrConstants.MAX_VERSION, -1, true)
+    return encodeSegments(segments, correctionLevel, Constants.MIN_VERSION, Constants.MAX_VERSION, -1, true)
 }
 
 /**
@@ -80,8 +82,8 @@ fun encodeSegments(segments: List<QrSegment>, correctionLevel: ErrorCorrectionLe
  * @throws DataTooLongException if the segments fail to fit in the maxVersion QR Code at the ECL, which means they are too long
  */
 fun encodeSegments(segments: List<QrSegment>, correctionLevel: ErrorCorrectionLevel, minVersion: Int, maxVersion: Int, mask: Int, boostEcl: Boolean): QrCodeInfo {
-    require(minVersion in QrConstants.MIN_VERSION..maxVersion)
-    require(maxVersion in minVersion..QrConstants.MAX_VERSION)
+    require(minVersion in Constants.MIN_VERSION..maxVersion)
+    require(maxVersion in minVersion..Constants.MAX_VERSION)
     require(mask in -1..7)
 
     var ecl = correctionLevel
@@ -173,7 +175,7 @@ fun getNumDataCodewords(ver: Int, correctionLevel: ErrorCorrectionLevel): Int =
 // all function modules are excluded. This includes remainder bits, so it might not be a multiple of 8.
 // The result is in the range [208, 29648]. This could be implemented as a 40-entry lookup table.
 fun getNumRawDataModules(ver: Int): Int {
-    require(!(ver < QrConstants.MIN_VERSION || ver > QrConstants.MAX_VERSION)) { "Version number out of range" }
+    require(!(ver < Constants.MIN_VERSION || ver > Constants.MAX_VERSION)) { "Version number out of range" }
 
     val size = ver * 4 + 17
     var result = size * size // Number of modules in the whole QR Code square
@@ -215,9 +217,8 @@ fun getTotalBits(segments: List<QrSegment>, version: Int): Int {
     return result.toInt()
 }
 
-object Constants {
+object QrTables {
 
-    @JvmField
     val ECC_CODEWORDS_PER_BLOCK = arrayOf(
         // Version: (note that index 0 is for padding, and is set to an illegal value)
         //           0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40    Error correction level
@@ -227,7 +228,6 @@ object Constants {
         byteArrayOf(-1, 17, 28, 22, 16, 22, 28, 26, 26, 24, 28, 24, 28, 22, 24, 24, 30, 28, 28, 26, 28, 30, 24, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30)   // High
     )
 
-    @JvmField
     val NUM_ERROR_CORRECTION_BLOCKS = arrayOf(
         // Version: (note that index 0 is for padding, and is set to an illegal value)
         //           0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40    Error correction level

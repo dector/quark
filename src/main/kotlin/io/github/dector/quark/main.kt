@@ -3,7 +3,6 @@ package io.github.dector.quark
 import io.github.dector.quark.ascii.toAscii
 import io.github.dector.quark.builders.encodeText
 import io.github.dector.quark.exporters.image.ImageExporter
-import io.github.dector.quark.qr.ErrorCorrectionLevel
 import java.io.File
 import javax.imageio.ImageIO
 

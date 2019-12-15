@@ -27,9 +27,9 @@
 
 package io.github.dector.quark.builders
 
-import io.github.dector.quark.util.BitBuffer
+import io.github.dector.quark.utils.BitBuffer
 import io.github.dector.quark.qr.QrSegment
-import io.github.dector.quark.util.create
+import io.github.dector.quark.utils.create
 import java.util.regex.Pattern
 import kotlin.math.min
 

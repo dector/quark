@@ -33,7 +33,7 @@ package io.github.dector.quark.qr
  *  - Decrease the error correction level if it was greater than `Ecc.LOW`.
  *  - If the advanced `encodeSegments()` function with 6 arguments or the
  * `makeSegmentsOptimally()` function was called, then increase the maxVersion argument
- * if it was less than [QrConstants.MAX_VERSION]. (This advice does not apply to the other
+ * if it was less than [Constants.MAX_VERSION]. (This advice does not apply to the other
  * factory functions because they search all versions up to `QrConstants.MAX_VERSION`.)
  *  - Split the text data into better or optimal segments in order to reduce the number of
  * bits required. (See [     QrSegmentAdvanced.makeSegmentsOptimally()][QrSegmentAdvanced.makeSegmentsOptimally].)

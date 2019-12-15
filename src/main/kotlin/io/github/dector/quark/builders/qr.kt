@@ -28,7 +28,7 @@
 package io.github.dector.quark.builders
 
 import io.github.dector.quark.QrCode
-import io.github.dector.quark.qr.ErrorCorrectionLevel
+import io.github.dector.quark.ErrorCorrectionLevel
 import io.github.dector.quark.qr.QrCodeInfo
 import io.github.dector.quark.qr.QrSegment
 import io.github.dector.quark.qr.encodeSegments

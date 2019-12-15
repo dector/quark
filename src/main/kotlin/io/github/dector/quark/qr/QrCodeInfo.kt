@@ -28,13 +28,11 @@
 package io.github.dector.quark.qr
 
 import io.github.dector.quark.QrCode
-import io.github.dector.quark.qr.QrConstants.MAX_VERSION
-import io.github.dector.quark.qr.QrConstants.MIN_VERSION
-import io.github.dector.quark.qr.QrConstants.PENALTY_N1
-import io.github.dector.quark.qr.QrConstants.PENALTY_N2
-import io.github.dector.quark.qr.QrConstants.PENALTY_N3
-import io.github.dector.quark.qr.QrConstants.PENALTY_N4
+import io.github.dector.quark.Constants.MAX_VERSION
+import io.github.dector.quark.Constants.MIN_VERSION
+import io.github.dector.quark.ErrorCorrectionLevel
 import io.github.dector.quark.size
+import io.github.dector.quark.utils.parseBit
 import java.util.Arrays
 import java.util.Objects
 
@@ -169,15 +167,15 @@ class QrCodeInfo(
         assert(bits ushr 15 == 0)
 
         // Draw first copy
-        for (i in 0..5) setFunctionModule(8, i, getBit(bits, i))
-        setFunctionModule(8, 7, getBit(bits, 6))
-        setFunctionModule(8, 8, getBit(bits, 7))
-        setFunctionModule(7, 8, getBit(bits, 8))
-        for (i in 9..14) setFunctionModule(14 - i, 8, getBit(bits, i))
+        for (i in 0..5) setFunctionModule(8, i, bits.parseBit(i))
+        setFunctionModule(8, 7, bits.parseBit(6))
+        setFunctionModule(8, 8, bits.parseBit(7))
+        setFunctionModule(7, 8, bits.parseBit(8))
+        for (i in 9..14) setFunctionModule(14 - i, 8, bits.parseBit(i))
 
         // Draw second copy
-        for (i in 0..7) setFunctionModule(size - 1 - i, 8, getBit(bits, i))
-        for (i in 8..14) setFunctionModule(8, size - 15 + i, getBit(bits, i))
+        for (i in 0..7) setFunctionModule(size - 1 - i, 8, bits.parseBit(i))
+        for (i in 8..14) setFunctionModule(8, size - 15 + i, bits.parseBit(i))
         setFunctionModule(8, size - 8, true) // Always black
     }
 
@@ -194,7 +192,7 @@ class QrCodeInfo(
 
         // Draw two copies
         for (i in 0..17) {
-            val bit = getBit(bits, i)
+            val bit = bits.parseBit(i)
             val a = size - 11 + i % 3
             val b = i / 3
             setFunctionModule(a, b, bit)
@@ -239,8 +237,8 @@ class QrCodeInfo(
         require(data.size == getNumDataCodewords(version, errorCorrectionLevel))
 
         // Calculate parameter numbers
-        val numBlocks = Constants.NUM_ERROR_CORRECTION_BLOCKS[errorCorrectionLevel.ordinal][version].toInt()
-        val blockEccLen = Constants.ECC_CODEWORDS_PER_BLOCK[errorCorrectionLevel.ordinal][version].toInt()
+        val numBlocks = QrTables.NUM_ERROR_CORRECTION_BLOCKS[errorCorrectionLevel.ordinal][version].toInt()
+        val blockEccLen = QrTables.ECC_CODEWORDS_PER_BLOCK[errorCorrectionLevel.ordinal][version].toInt()
         val rawCodewords = getNumRawDataModules(version) / 8
         val numShortBlocks = numBlocks - rawCodewords % numBlocks
         val shortBlockLen = rawCodewords / numBlocks
@@ -298,7 +296,7 @@ class QrCodeInfo(
                     val upward = right + 1 and 2 == 0
                     val y = if (upward) size - 1 - vert else vert // Actual y coordinate
                     if (!isFunction!![y][x] && i < data.size * 8) {
-                        modules[y][x] = getBit(data[i ushr 3].toInt(), 7 - (i and 7))
+                        modules[y][x] = data[i ushr 3].toInt().parseBit(7 - (i and 7))
                         i++
                     }
                     // If this QR Code has any remainder bits (0 to 7), they were assigned as
@@ -489,3 +487,9 @@ class QrCodeInfo(
         return finderPenaltyCountPatterns(runHistory)
     }
 }
+
+// For use in getPenaltyScore(), when evaluating which mask is best.
+private const val PENALTY_N1 = 3
+private const val PENALTY_N2 = 3
+private const val PENALTY_N3 = 40
+private const val PENALTY_N4 = 10

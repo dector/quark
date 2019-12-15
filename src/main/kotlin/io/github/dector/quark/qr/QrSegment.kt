@@ -27,7 +27,8 @@
 
 package io.github.dector.quark.qr
 
-import io.github.dector.quark.util.BitBuffer
+import io.github.dector.quark.Constants
+import io.github.dector.quark.utils.BitBuffer
 
 /**
  * A segment of character/binary/control data in a QR Code symbol.
@@ -86,7 +87,7 @@ data class QrSegment(
         // Returns the bit width of the character count field for a segment in this mode
         // in a QR Code at the given version number. The result is in the range [0, 16].
         fun numCharCountBits(version: Int): Int {
-            require(version in QrConstants.MIN_VERSION..QrConstants.MAX_VERSION)
+            require(version in Constants.MIN_VERSION..Constants.MAX_VERSION)
 
             return numBitsCharCount[(version + 7) / 17]
         }
