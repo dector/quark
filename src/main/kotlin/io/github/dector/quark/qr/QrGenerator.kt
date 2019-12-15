@@ -34,8 +34,6 @@ import io.github.dector.quark.QrCode
 import io.github.dector.quark.utils.parseBit
 import java.util.Arrays
 import java.util.Objects
-import kotlin.math.abs
-import kotlin.math.max
 
 class QrGenerator(
     private val config: Config,
@@ -79,77 +77,11 @@ class QrGenerator(
 }
 
 private fun fillFunctionPattern(layer: Layer, config: QrGenerator.Config) {
-    val size = layer.size
-
-    // Draws a 9*9 finder pattern including the border separator,
-    // with the center module at (x, y). Modules can be out of bounds.
-    fun drawFinderPattern(x: Int, y: Int) {
-        for (dy in -4..4) {
-            for (dx in -4..4) {
-                val dist = Math.max(Math.abs(dx), Math.abs(dy)) // Chebyshev/infinity norm
-                val xx = x + dx
-                val yy = y + dy
-                if ((xx in 0 until size) && (yy in 0 until size)) {
-                    val isFilled = dist != 2 && dist != 4
-                    layer.setAndProtect(xx, yy, isFilled)
-                }
-            }
-        }
-    }
-
-    // Draws a 5*5 alignment pattern, with the center module
-    // at (x, y). All modules must be in bounds.
-    fun drawAlignmentPattern(x: Int, y: Int) {
-        for (dy in -2..2) {
-            for (dx in -2..2) {
-                val isFilled = max(abs(dx), abs(dy)) != 1
-                layer.setAndProtect(x + dx, y + dy, isFilled)
-            }
-        }
-    }
-
-    // Returns an ascending list of positions of alignment patterns for this version number.
-    // Each position is in the range [0,177), and are used on both the x and y axes.
-    // This could be implemented as lookup table of 40 variable-length lists of unsigned bytes.
-    fun getAlignmentPatternPositions(): IntArray {
-        val version = config.version
-
-        return if (version == 1) {
-            intArrayOf() // Draw horizontal and vertical timing patterns
-        } else {
-            val numAlign = version / 7 + 2
-            val step: Int
-            step = if (version == 32) // Special snowflake
-                26 else  // step = ceil[(size - 13) / (numAlign*2 - 2)] * 2
-                (version * 4 + numAlign * 2 + 1) / (numAlign * 2 - 2) * 2
-            val result = IntArray(numAlign)
-            result[0] = 6
-            var i = result.size - 1
-            var pos = size - 7
-            while (i >= 1) {
-                result[i] = pos
-                i--
-                pos -= step
-            }
-            result
-        }
-    }
-
     layer.drawTimingPattern()
+    layer.drawFinderPattern()
+    layer.drawAlignmentPattern(config.version)
 
-    // Draw 3 finder patterns (all corners except bottom right; overwrites some timing modules)
-    drawFinderPattern(3, 3)
-    drawFinderPattern(size - 4, 3)
-    drawFinderPattern(3, size - 4)
-
-    // Draw numerous alignment patterns
-    val alignPatPos = getAlignmentPatternPositions()
-    val numAlign = alignPatPos.size
-    for (i in 0 until numAlign) {
-        for (j in 0 until numAlign) { // Don't draw on the three finder corners
-            if (!(i == 0 && j == 0 || i == 0 && j == numAlign - 1 || i == numAlign - 1 && j == 0)) drawAlignmentPattern(alignPatPos[i], alignPatPos[j])
-        }
-    }
+    val size = layer.size
 
     // Draws two copies of the version bits (with its own error correction code),
     // based on this object's version field, iff 7 <= version <= 40.

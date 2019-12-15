@@ -20,6 +20,14 @@ fun Layer.setAndProtect(x: Int, y: Int, isFilled: Boolean) {
     protect(x, y)
 }
 
+fun Layer.setAndProtectSafe(x: Int, y: Int, isFilled: Boolean) {
+    if (x !in 0 until size) return
+    if (y !in 0 until size) return
+
+    set(x, y, isFilled)
+    protect(x, y)
+}
+
 fun Layer.protect(x: Int, y: Int) {
     protectionMask[x, y] = true
 }
