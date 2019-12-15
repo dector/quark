@@ -25,9 +25,13 @@
  *   Software.
  */
 
-package io.github.dector.quark.qr
+package io.github.dector.quark.builders
 
 import io.github.dector.quark.QrCode
+import io.github.dector.quark.qr.ErrorCorrectionLevel
+import io.github.dector.quark.qr.QrCodeInfo
+import io.github.dector.quark.qr.QrSegment
+import io.github.dector.quark.qr.encodeSegments
 
 /**
  * Returns a QR Code representing the specified Unicode text string at the specified error correction level.
@@ -44,7 +48,7 @@ import io.github.dector.quark.QrCode
  * @throws DataTooLongException if the text fails to fit in the largest version QR Code at the ECL, which means it is too long
  */
 fun QrCode.Companion.encodeText(text: String, correctionLevel: ErrorCorrectionLevel): QrCodeInfo {
-    val segments = makeSegments(text)
+    val segments = QrSegment.createWithBestEncoding(text)
     return encodeSegments(segments, correctionLevel)
 }
 
@@ -62,6 +66,6 @@ fun QrCode.Companion.encodeText(text: String, correctionLevel: ErrorCorrectionLe
  * @throws DataTooLongException if the data fails to fit in the largest version QR Code at the ECL, which means it is too long
  */
 fun QrCode.Companion.encodeBinary(data: ByteArray, correctionLevel: ErrorCorrectionLevel): QrCodeInfo {
-    val seg = makeBytes(data)
+    val seg = QrSegment.makeBytes(data)
     return encodeSegments(listOf(seg), correctionLevel)
 }

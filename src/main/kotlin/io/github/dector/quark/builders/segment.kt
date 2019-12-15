@@ -25,9 +25,11 @@
  *   Software.
  */
 
-package io.github.dector.quark.qr
+package io.github.dector.quark.builders
 
-import java.nio.charset.StandardCharsets
+import io.github.dector.quark.util.BitBuffer
+import io.github.dector.quark.qr.QrSegment
+import io.github.dector.quark.util.create
 import java.util.regex.Pattern
 import kotlin.math.min
 
@@ -39,12 +41,16 @@ import kotlin.math.min
  *
  * @return a new list of segments containing the text
  */
-fun makeSegments(text: String): List<QrSegment> = when {
+fun QrSegment.Companion.createWithBestEncoding(text: String): List<QrSegment> = when {
     // Select the most efficient segment encoding automatically
-    text.isEmpty() -> emptyList()
-    text.isNumeric() -> makeNumeric(text).inList()
-    text.isAlphanumeric() -> makeAlphanumeric(text).inList()
-    else -> makeBytes(text.toByteArray(StandardCharsets.UTF_8)).inList()
+    text.isEmpty() ->
+        emptyList()
+    text.isNumeric() ->
+        QrSegment.makeNumeric(text).inList()
+    text.isAlphanumeric() ->
+        QrSegment.makeAlphanumeric(text).inList()
+    else ->
+        QrSegment.makeBytes(text.toByteArray()).inList()
 }
 
 /**
@@ -55,20 +61,22 @@ fun makeSegments(text: String): List<QrSegment> = when {
  *
  * @throws IllegalArgumentException if the string contains non-digit characters
  */
-fun makeNumeric(digits: String): QrSegment {
+fun QrSegment.Companion.makeNumeric(digits: String): QrSegment {
     require(NUMERIC_REGEX.matcher(digits).matches()) { "String contains non-numeric characters" }
 
-    val bb = BitBuffer.create()
+    val buffer = BitBuffer.create()
 
     var i = 0
-    while (i < digits.length) {
+    while (i <= digits.lastIndex) {
         // Consume up to 3 digits per iteration
         val n = min(digits.length - i, 3)
-        bb.appendBits(digits.substring(i, i + n).toInt(), n * 3 + 1)
+        val bits = digits.substring(i, i + n).toInt()
+        buffer.appendBits(bits, n * 3 + 1)
+
         i += n
     }
 
-    return QrSegment(QrSegment.Mode.NUMERIC, digits.length, bb)
+    return QrSegment(QrSegment.Mode.NUMERIC, digits.length, buffer)
 }
 
 
@@ -82,26 +90,28 @@ fun makeNumeric(digits: String): QrSegment {
  *
  * @throws IllegalArgumentException if the string contains non-encodable characters
  */
-fun makeAlphanumeric(text: String): QrSegment {
+fun QrSegment.Companion.makeAlphanumeric(text: String): QrSegment {
     require(ALPHANUMERIC_REGEX.matcher(text).matches()) { "String contains unencodable characters in alphanumeric mode" }
 
-    val bb = BitBuffer.create()
+    val buffer = BitBuffer.create()
 
     var i = 0
     while (i <= text.length - 2) {
         // Process groups of 2
-        var temp = ALPHANUMERIC_CHARSET.indexOf(text[i]) * 45
-        temp += ALPHANUMERIC_CHARSET.indexOf(text[i + 1])
-        bb.appendBits(temp, 11)
+        var bits = ALPHANUMERIC_CHARSET.indexOf(text[i]) * 45
+        bits += ALPHANUMERIC_CHARSET.indexOf(text[i + 1])
+        buffer.appendBits(bits, 11)
+
         i += 2
     }
 
     if (i < text.length) {
         // 1 character remaining
-        bb.appendBits(ALPHANUMERIC_CHARSET.indexOf(text[i]), 6)
+        val bits = ALPHANUMERIC_CHARSET.indexOf(text[i])
+        buffer.appendBits(bits, 6)
     }
 
-    return QrSegment(QrSegment.Mode.ALPHANUMERIC, text.length, bb)
+    return QrSegment(QrSegment.Mode.ALPHANUMERIC, text.length, buffer)
 }
 
 /**
@@ -113,7 +123,7 @@ fun makeAlphanumeric(text: String): QrSegment {
  * @param data the binary data
  * @return a segment containing the data
  */
-fun makeBytes(data: ByteArray): QrSegment {
+fun QrSegment.Companion.makeBytes(data: ByteArray): QrSegment {
     val buffer = BitBuffer.create()
     for (byte in data) {
         val bits = byte.toInt() and 0xFF

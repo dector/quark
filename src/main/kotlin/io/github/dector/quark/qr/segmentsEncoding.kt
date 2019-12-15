@@ -29,6 +29,8 @@ package io.github.dector.quark.qr
 
 import io.github.dector.quark.qr.Constants.ECC_CODEWORDS_PER_BLOCK
 import io.github.dector.quark.qr.Constants.NUM_ERROR_CORRECTION_BLOCKS
+import io.github.dector.quark.util.BitBuffer
+import io.github.dector.quark.util.create
 import kotlin.math.min
 
 /**

@@ -27,6 +27,8 @@
 
 package io.github.dector.quark.qr
 
+import io.github.dector.quark.util.BitBuffer
+
 /**
  * A segment of character/binary/control data in a QR Code symbol.
  * Instances of this class are immutable.
@@ -89,4 +91,6 @@ data class QrSegment(
             return numBitsCharCount[(version + 7) / 17]
         }
     }
+
+    companion object
 }
