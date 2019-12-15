@@ -47,31 +47,33 @@ class QrGenerator(
         require(requestedMask == -1 || requestedMask in 0..7) { "Mask value out of range" }
     }
 
-    private var selectedMask = requestedMask
+    private var selectedMask = requestedMask    // Will be updated later
 
-    private val size = config.version * 4 + 17
-    private val canvas = SquareField(size)
-    private val canvasMask = SquareField(size)
+    private val layer = run {
+        val size = config.version * 4 + 17
+
+        Layer(SquareField(size), SquareField(size))
+    }
+    private val canvas = layer.canvas
+    private val canvasMask = layer.mask
 
     operator fun invoke(dataCodewords: ByteArray): QrCode {
         // Compute ECC, draw modules, do masking
-        fillFunctionPattern(config, canvas, canvasMask)
+        fillFunctionPattern(config, layer)
 
-        fillCodewords(config, dataCodewords, canvas, canvasMask)
-        selectedMask = detectAndFillMask(requestedMask, config.correctionLevel, canvas, canvasMask)
+        fillCodewords(config, dataCodewords, layer)
+        selectedMask = detectAndFillMask(requestedMask, config.correctionLevel, layer)
 
         return getGenerated()
     }
 
-    private fun getGenerated(): QrCode {
-        val version = this.config.version
-        val canvas = this.canvas
+    private fun getGenerated(): QrCode =
+        object : QrCode {
+            private val canvas = layer.canvas.copy()
 
-        return object : QrCode {
-            override val version = version
+            override val version = config.version
             override fun get(x: Int, y: Int) = canvas[x, y]
         }
-    }
 
     data class Config(
         val version: Int,
@@ -79,8 +81,8 @@ class QrGenerator(
     )
 }
 
-private fun fillFunctionPattern(config: QrGenerator.Config, canvas: SquareField, canvasMask: SquareField) {
-    val size = canvas.size
+private fun fillFunctionPattern(config: QrGenerator.Config, layer: Layer) {
+    val size = layer.size
 
     // Draws a 9*9 finder pattern including the border separator,
     // with the center module at (x, y). Modules can be out of bounds.
@@ -92,7 +94,7 @@ private fun fillFunctionPattern(config: QrGenerator.Config, canvas: SquareField,
                 val yy = y + dy
                 if ((xx in 0 until size) && (yy in 0 until size)) {
                     val isFilled = dist != 2 && dist != 4
-                    setFunctionModule(xx, yy, isFilled, canvas, canvasMask)
+                    setFunctionModule(xx, yy, isFilled, layer)
                 }
             }
         }
@@ -104,7 +106,7 @@ private fun fillFunctionPattern(config: QrGenerator.Config, canvas: SquareField,
         for (dy in -2..2) {
             for (dx in -2..2) {
                 val isFilled = max(abs(dx), abs(dy)) != 1
-                setFunctionModule(x + dx, y + dy, isFilled, canvas, canvasMask)
+                setFunctionModule(x + dx, y + dy, isFilled, layer)
             }
         }
     }
@@ -137,8 +139,8 @@ private fun fillFunctionPattern(config: QrGenerator.Config, canvas: SquareField,
     }
 
     for (i in 0 until size) {
-        setFunctionModule(6, i, i % 2 == 0, canvas, canvasMask)
-        setFunctionModule(i, 6, i % 2 == 0, canvas, canvasMask)
+        setFunctionModule(6, i, i % 2 == 0, layer)
+        setFunctionModule(i, 6, i % 2 == 0, layer)
     }
     // Draw 3 finder patterns (all corners except bottom right; overwrites some timing modules)
     drawFinderPattern(3, 3)
@@ -171,20 +173,20 @@ private fun fillFunctionPattern(config: QrGenerator.Config, canvas: SquareField,
             val bit = bits.parseBit(i)
             val a = size - 11 + i % 3
             val b = i / 3
-            setFunctionModule(a, b, bit, canvas, canvasMask)
-            setFunctionModule(b, a, bit, canvas, canvasMask)
+            setFunctionModule(a, b, bit, layer)
+            setFunctionModule(b, a, bit, layer)
         }
     }
 
     // Draw configuration data
-    drawFormatBits(0, config.correctionLevel, canvas, canvasMask) // Dummy mask value; overwritten later in the constructor
+    drawFormatBits(0, config.correctionLevel, layer) // Dummy mask value; overwritten later in the constructor
     drawVersion()
 }
 
-private fun fillCodewords(config: QrGenerator.Config, dataCodewords: ByteArray, canvas: SquareField, canvasMask: SquareField) {
+private fun fillCodewords(config: QrGenerator.Config, dataCodewords: ByteArray, layer: Layer) {
     val allCodewords = addEccAndInterleave(config, dataCodewords)
 
-    val size = canvas.size
+    val size = layer.size
 
     // Draws the given sequence of 8-bit codewords (data and error correction) onto the entire
     // data area of this QR Code. Function modules need to be marked off before this is called.
@@ -204,8 +206,8 @@ private fun fillCodewords(config: QrGenerator.Config, dataCodewords: ByteArray, 
                     val x = right - j // Actual x coordinate
                     val upward = right + 1 and 2 == 0
                     val y = if (upward) size - 1 - vert else vert // Actual y coordinate
-                    if (!canvasMask[x, y] && i < data.size * 8) {
-                        canvas[x, y] = data[i ushr 3].toInt().parseBit(7 - (i and 7))
+                    if (!layer.mask[x, y] && i < data.size * 8) {
+                        layer.canvas[x, y] = data[i ushr 3].toInt().parseBit(7 - (i and 7))
                         i++
                     }
                     // If this QR Code has any remainder bits (0 to 7), they were assigned as
@@ -269,9 +271,9 @@ private fun addEccAndInterleave(config: QrGenerator.Config, data: ByteArray): By
 // A messy helper function for the constructor. This QR Code must be in an unmasked state when this
 // method is called. The given argument is the requested mask, which is -1 for auto or 0 to 7 for fixed.
 // This method applies and returns the actual mask chosen, from 0 to 7.
-private fun detectAndFillMask(requestedMask: Int, correctionLevel: ErrorCorrectionLevel, canvas: SquareField, canvasMask: SquareField): Int {
+private fun detectAndFillMask(requestedMask: Int, correctionLevel: ErrorCorrectionLevel, layer: Layer): Int {
     var mask = requestedMask
-    val size = canvas.size
+    val size = layer.size
 
     // XORs the codeword modules in this QR Code with the given mask pattern.
     // The function modules must be marked and the codeword bits must be drawn
@@ -293,7 +295,7 @@ private fun detectAndFillMask(requestedMask: Int, correctionLevel: ErrorCorrecti
                     7 -> ((x + y) % 2 + x * y % 3) % 2 == 0
                     else -> throw AssertionError()
                 }
-                canvas[x, y] = canvas[x, y] xor (invert and !canvasMask[x, y])
+                layer.canvas[x, y] = layer.canvas[x, y] xor (invert and !layer.mask[x, y])
             }
         }
     }
@@ -302,8 +304,8 @@ private fun detectAndFillMask(requestedMask: Int, correctionLevel: ErrorCorrecti
         var minPenalty = Int.MAX_VALUE
         for (i in 0..7) {
             applyMask(i)
-            drawFormatBits(i, correctionLevel, canvas, canvasMask)
-            val penalty: Int = getPenaltyScore(canvas)
+            drawFormatBits(i, correctionLevel, layer)
+            val penalty: Int = getPenaltyScore(layer.canvas)
             if (penalty < minPenalty) {
                 mask = i
                 minPenalty = penalty
@@ -314,15 +316,15 @@ private fun detectAndFillMask(requestedMask: Int, correctionLevel: ErrorCorrecti
     assert(mask in 0..7)
     applyMask(mask) // Apply the final choice of mask
 
-    drawFormatBits(mask, correctionLevel, canvas, canvasMask) // Overwrite old format bits
+    drawFormatBits(mask, correctionLevel, layer) // Overwrite old format bits
 
     return mask // The caller shall assign this value to the final-declared field
 }
 
 // Draws two copies of the format bits (with its own error correction code)
 // based on the given mask and this object's error correction level field.
-private fun drawFormatBits(mask: Int, correctionLevel: ErrorCorrectionLevel, canvas: SquareField, canvasMask: SquareField) {
-    val size = canvas.size
+private fun drawFormatBits(mask: Int, correctionLevel: ErrorCorrectionLevel, layer: Layer) {
+    val size = layer.size
 
     // Calculate error correction code and pack bits
     val data = correctionLevel.formatBits shl 3 or mask // errCorrLvl is uint2, mask is uint3
@@ -332,23 +334,23 @@ private fun drawFormatBits(mask: Int, correctionLevel: ErrorCorrectionLevel, can
     assert(bits ushr 15 == 0)
 
     // Draw first copy
-    for (i in 0..5) setFunctionModule(8, i, bits.parseBit(i), canvas, canvasMask)
-    setFunctionModule(8, 7, bits.parseBit(6), canvas, canvasMask)
-    setFunctionModule(8, 8, bits.parseBit(7), canvas, canvasMask)
-    setFunctionModule(7, 8, bits.parseBit(8), canvas, canvasMask)
-    for (i in 9..14) setFunctionModule(14 - i, 8, bits.parseBit(i), canvas, canvasMask)
+    for (i in 0..5) setFunctionModule(8, i, bits.parseBit(i), layer)
+    setFunctionModule(8, 7, bits.parseBit(6), layer)
+    setFunctionModule(8, 8, bits.parseBit(7), layer)
+    setFunctionModule(7, 8, bits.parseBit(8), layer)
+    for (i in 9..14) setFunctionModule(14 - i, 8, bits.parseBit(i), layer)
 
     // Draw second copy
-    for (i in 0..7) setFunctionModule(size - 1 - i, 8, bits.parseBit(i), canvas, canvasMask)
-    for (i in 8..14) setFunctionModule(8, size - 15 + i, bits.parseBit(i), canvas, canvasMask)
-    setFunctionModule(8, size - 8, true, canvas, canvasMask) // Always black
+    for (i in 0..7) setFunctionModule(size - 1 - i, 8, bits.parseBit(i), layer)
+    for (i in 8..14) setFunctionModule(8, size - 15 + i, bits.parseBit(i), layer)
+    setFunctionModule(8, size - 8, true, layer) // Always black
 }
 
 // Sets the color of a module and marks it as a function module.
 // Only used by the constructor. Coordinates must be in bounds.
-private fun setFunctionModule(x: Int, y: Int, isBlack: Boolean, canvas: SquareField, canvasMask: SquareField) {
-    canvas[x, y] = isBlack
-    canvasMask[x, y] = true
+private fun setFunctionModule(x: Int, y: Int, isBlack: Boolean, layer: Layer) {
+    layer.canvas[x, y] = isBlack
+    layer.mask[x, y] = true
 }
 
 // Note that size is odd, so black/total != 1/2
@@ -475,4 +477,23 @@ private class SquareField(val size: Int) {
     }
 
     operator fun get(x: Int, y: Int): Boolean = data[x][y]
+
+    fun copy(): SquareField = SquareField(size).also { other ->
+        (0 until size).forEach { x ->
+            (0 until size).forEach { y ->
+                other[x, y] = this[x, y]
+            }
+        }
+    }
+}
+
+private data class Layer(
+    val canvas: SquareField,
+    val mask: SquareField
+) {
+    init {
+        require(canvas.size == mask.size)
+    }
+
+    val size = canvas.size
 }
