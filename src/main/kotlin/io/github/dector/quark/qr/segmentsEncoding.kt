@@ -29,6 +29,7 @@ package io.github.dector.quark.qr
 
 import io.github.dector.quark.Constants
 import io.github.dector.quark.ErrorCorrectionLevel
+import io.github.dector.quark.QrCode
 import io.github.dector.quark.qr.QrTables.ECC_CODEWORDS_PER_BLOCK
 import io.github.dector.quark.qr.QrTables.NUM_ERROR_CORRECTION_BLOCKS
 import io.github.dector.quark.utils.BitBuffer
@@ -52,7 +53,7 @@ import kotlin.math.min
  *
  * @throws DataTooLongException if the segments fail to fit in the largest version QR Code at the ECL, which means they are too long
  */
-fun encodeSegments(segments: List<QrSegment>, correctionLevel: ErrorCorrectionLevel): QrCodeInfo {
+fun encodeSegments(segments: List<QrSegment>, correctionLevel: ErrorCorrectionLevel): QrCode {
     return encodeSegments(segments, correctionLevel, Constants.MIN_VERSION, Constants.MAX_VERSION, -1, true)
 }
 
@@ -81,7 +82,7 @@ fun encodeSegments(segments: List<QrSegment>, correctionLevel: ErrorCorrectionLe
  * @throws IllegalArgumentException if 1 &#x2264; minVersion &#x2264; maxVersion &#x2264; 40 or &#x2212;1 &#x2264; mask &#x2264; 7 is violated
  * @throws DataTooLongException if the segments fail to fit in the maxVersion QR Code at the ECL, which means they are too long
  */
-fun encodeSegments(segments: List<QrSegment>, correctionLevel: ErrorCorrectionLevel, minVersion: Int, maxVersion: Int, mask: Int, boostEcl: Boolean): QrCodeInfo {
+fun encodeSegments(segments: List<QrSegment>, correctionLevel: ErrorCorrectionLevel, minVersion: Int, maxVersion: Int, mask: Int, boostEcl: Boolean): QrCode {
     require(minVersion in Constants.MIN_VERSION..maxVersion)
     require(maxVersion in minVersion..Constants.MAX_VERSION)
     require(mask in -1..7)
@@ -136,7 +137,7 @@ fun encodeSegments(segments: List<QrSegment>, correctionLevel: ErrorCorrectionLe
     }
 
     // Create the QR Code object
-    return QrCodeInfo(version, ecl, dataCodewords, mask).also { it.generate() }
+    return QrGenerator(version, ecl, mask, dataCodewords).invoke()
 }
 
 private fun calculateVersion(segments: List<QrSegment>, minVersion: Int, maxVersion: Int, correctionLevel: ErrorCorrectionLevel): Int {

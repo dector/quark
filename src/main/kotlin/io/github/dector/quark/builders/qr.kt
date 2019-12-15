@@ -27,9 +27,8 @@
 
 package io.github.dector.quark.builders
 
-import io.github.dector.quark.QrCode
 import io.github.dector.quark.ErrorCorrectionLevel
-import io.github.dector.quark.qr.QrCodeInfo
+import io.github.dector.quark.QrCode
 import io.github.dector.quark.qr.QrSegment
 import io.github.dector.quark.qr.encodeSegments
 
@@ -47,7 +46,7 @@ import io.github.dector.quark.qr.encodeSegments
  *
  * @throws DataTooLongException if the text fails to fit in the largest version QR Code at the ECL, which means it is too long
  */
-fun QrCode.Companion.encodeText(text: String, correctionLevel: ErrorCorrectionLevel): QrCodeInfo {
+fun QrCode.Companion.encodeText(text: String, correctionLevel: ErrorCorrectionLevel): QrCode {
     val segments = QrSegment.createWithBestEncoding(text)
     return encodeSegments(segments, correctionLevel)
 }
@@ -65,7 +64,7 @@ fun QrCode.Companion.encodeText(text: String, correctionLevel: ErrorCorrectionLe
  *
  * @throws DataTooLongException if the data fails to fit in the largest version QR Code at the ECL, which means it is too long
  */
-fun QrCode.Companion.encodeBinary(data: ByteArray, correctionLevel: ErrorCorrectionLevel): QrCodeInfo {
+fun QrCode.Companion.encodeBinary(data: ByteArray, correctionLevel: ErrorCorrectionLevel): QrCode {
     val seg = QrSegment.makeBytes(data)
     return encodeSegments(listOf(seg), correctionLevel)
 }

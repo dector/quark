@@ -66,8 +66,8 @@ object ImageExporter {
                 fillRect(0, 0, image.width, image.height)
             }
 
-            (0..qr.size).forEach { i ->
-                (0..qr.size).forEach { j ->
+            (0 until qr.size).forEach { i ->
+                (0 until qr.size).forEach { j ->
                     val x = (i + border) * scale
                     val y = (j + border) * scale
                     val color = if (qr[i, j]) Color.BLACK else Color.WHITE
