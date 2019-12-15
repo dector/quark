@@ -43,7 +43,7 @@ interface BitBuffer {
 
 interface MutableBitBuffer : BitBuffer {
 
-    fun appendBits(value: Int, len: Int)
+    fun appendBits(value: Int, count: Int)
     fun appendData(bb: BitBuffer)
 
     override fun copy(): BitBuffer
@@ -92,10 +92,10 @@ class RealBitBuffer constructor(
      * @throws IllegalStateException if appending the data would make bitLength exceed Integer.MAX_VALUE
      */
     override fun appendBits(value: Int, count: Int) {
-        require(count in 0..31) { "Value out of range" }
-        require(value ushr count == 0) { "Incorrect length" }
+        require(count in 0..31) { "Incorrect bit count" }
+        require(value ushr count == 0) { "Value should contain only required bits" }
 
-        check(Int.MAX_VALUE - size >= count) { "Maximum length reached" }
+        check(size + count <= Int.MAX_VALUE) { "Maximum length reached" }
 
         ((count - 1) downTo 0).forEach { i ->
             data[size] = value.parseBit(i)
@@ -111,12 +111,10 @@ class RealBitBuffer constructor(
      * @throws IllegalStateException if appending the data would make bitLength exceed Integer.MAX_VALUE
      */
     override fun appendData(bb: BitBuffer) {
-        check(Int.MAX_VALUE - size >= bb.size) { "Maximum length reached" }
-        var i = 0
-        while (i < bb.size) {
-            // Append bit by bit
+        check(size + bb.size <= Int.MAX_VALUE) { "Maximum length reached" }
+
+        (0 until bb.size).forEach { i ->
             data[size] = bb[i]
-            i++
             size++
         }
     }
