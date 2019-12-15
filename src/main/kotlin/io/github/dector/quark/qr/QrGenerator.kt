@@ -135,14 +135,13 @@ private fun fillFunctionPattern(layer: Layer, config: QrGenerator.Config) {
         }
     }
 
-    for (i in 0 until size) {
-        layer.setAndProtect(6, i, i % 2 == 0)
-        layer.setAndProtect(i, 6, i % 2 == 0)
-    }
+    layer.drawTimingPattern()
+
     // Draw 3 finder patterns (all corners except bottom right; overwrites some timing modules)
     drawFinderPattern(3, 3)
     drawFinderPattern(size - 4, 3)
     drawFinderPattern(3, size - 4)
+
     // Draw numerous alignment patterns
     val alignPatPos = getAlignmentPatternPositions()
     val numAlign = alignPatPos.size
@@ -453,54 +452,3 @@ private const val PENALTY_N1 = 3
 private const val PENALTY_N2 = 3
 private const val PENALTY_N3 = 40
 private const val PENALTY_N4 = 10
-
-// ---
-
-private class SquareField(val size: Int) {
-
-    init {
-        require(size > 0)
-    }
-
-    private val data = Array(size) { BooleanArray(size) }
-
-    operator fun set(x: Int, y: Int, value: Boolean) {
-        data[x][y] = value
-    }
-
-    operator fun get(x: Int, y: Int): Boolean = data[x][y]
-
-    fun copy(): SquareField = SquareField(size).also { other ->
-        (0 until size).forEach { x ->
-            (0 until size).forEach { y ->
-                other[x, y] = this[x, y]
-            }
-        }
-    }
-}
-
-// ---
-
-private data class Layer(
-    val canvas: SquareField,
-    val protectionMask: SquareField
-) {
-    init {
-        require(canvas.size == protectionMask.size)
-    }
-
-    val size = canvas.size
-}
-
-private operator fun Layer.set(x: Int, y: Int, isFilled: Boolean) {
-    canvas[x, y] = isFilled
-}
-
-private fun Layer.setAndProtect(x: Int, y: Int, isFilled: Boolean) {
-    set(x, y, isFilled)
-    protect(x, y)
-}
-
-private fun Layer.protect(x: Int, y: Int) {
-    protectionMask[x, y] = true
-}
