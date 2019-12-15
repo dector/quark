@@ -90,7 +90,7 @@ private fun countAlignmentPatternPositions(version: Int, size: Int): IntArray {
 
 // Version
 
-fun Layer.drawVersion(version: Int) {
+fun Layer.drawVersionData(version: Int) {
     if (version < 7) return
 
     // uint18
@@ -123,7 +123,7 @@ fun Layer.drawVersion(version: Int) {
 
 // Format bits
 
-fun Layer.drawFormatBits(correctionLevel: ErrorCorrectionLevel, mask: Int = 0) {
+fun Layer.drawFormatData(correctionLevel: ErrorCorrectionLevel, mask: Int = 0) {
     // Draws two copies of the format bits (with its own error correction code)
     // based on the given mask and this object's error correction level field.
 

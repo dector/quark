@@ -80,8 +80,8 @@ private fun fillFunctionPattern(layer: Layer, config: QrGenerator.Config) {
     layer.drawTimingPattern()
     layer.drawFinderPattern()
     layer.drawAlignmentPattern(config.version)
-    layer.drawFormatBits(config.correctionLevel)
-    layer.drawVersion(config.version)
+    layer.drawFormatData(config.correctionLevel)
+    layer.drawVersionData(config.version)
 }
 
 private fun fillCodewords(layer: Layer, config: QrGenerator.Config, dataCodewords: ByteArray) {
