@@ -1,5 +1,6 @@
 package io.github.dector.quark.qr
 
+import io.github.dector.quark.utils.withGrid
 import kotlin.math.abs
 import kotlin.math.max
 
@@ -25,15 +26,13 @@ fun Layer.drawFinderPattern() {
 }
 
 private fun Layer.drawFinderElement(centerX: Int, centerY: Int) {
-    (-4..4).forEach { dx ->
-        (-4..4).forEach { dy ->
-            val x = centerX + dx
-            val y = centerY + dy
-            val distance = max(abs(dx), abs(dy))
+    withGrid(-4..4, -4..4) { dx, dy ->
+        val x = centerX + dx
+        val y = centerY + dy
+        val distance = max(abs(dx), abs(dy))
 
-            val isFilled = distance != 2 && distance != 4
-            setAndProtectSafe(x, y, isFilled)
-        }
+        val isFilled = distance != 2 && distance != 4
+        setAndProtectSafe(x, y, isFilled)
     }
 }
 
@@ -53,14 +52,12 @@ fun Layer.drawAlignmentPattern(version: Int) {
 }
 
 private fun Layer.drawAlignmentElement(centerX: Int, centerY: Int) {
-    (-2..2).forEach { dx ->
-        (-2..2).forEach { dy ->
-            val x = centerX + dx
-            val y = centerY + dy
+    withGrid(-2..2, -2..2) { dx, dy ->
+        val x = centerX + dx
+        val y = centerY + dy
 
-            val isFilled = max(abs(dx), abs(dy)) != 1
-            setAndProtect(x, y, isFilled)
-        }
+        val isFilled = max(abs(dx), abs(dy)) != 1
+        setAndProtect(x, y, isFilled)
     }
 }
 

@@ -56,8 +56,8 @@ class QrGenerator(
     operator fun invoke(dataCodewords: ByteArray): QrCode {
         fillFunctionPattern(layer, config)
 
-        fillCodewords(layer, config, dataCodewords)
-        selectedMask = detectAndFillMask(layer, requestedMask, config.correctionLevel)
+//        fillCodewords(layer, config, dataCodewords)
+//        selectedMask = detectAndFillMask(layer, requestedMask, config.correctionLevel)
 
         return getGenerated()
     }
