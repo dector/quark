@@ -27,8 +27,7 @@
 
 package io.github.dector.quark.qr
 
-// TODO Used as an intermediate entity for extension-based API design. All extensions should be implemented on top of `QrCode.Companion`.
-object QrEncoder
+import io.github.dector.quark.QrCode
 
 /**
  * Returns a QR Code representing the specified Unicode text string at the specified error correction level.
@@ -44,7 +43,7 @@ object QrEncoder
  *
  * @throws DataTooLongException if the text fails to fit in the largest version QR Code at the ECL, which means it is too long
  */
-fun QrEncoder.encodeText(text: String, correctionLevel: ErrorCorrectionLevel): QrCodeInfo {
+fun QrCode.Companion.encodeText(text: String, correctionLevel: ErrorCorrectionLevel): QrCodeInfo {
     val segments = makeSegments(text)
     return encodeSegments(segments, correctionLevel)
 }
@@ -62,7 +61,7 @@ fun QrEncoder.encodeText(text: String, correctionLevel: ErrorCorrectionLevel): Q
  *
  * @throws DataTooLongException if the data fails to fit in the largest version QR Code at the ECL, which means it is too long
  */
-fun QrEncoder.encodeBinary(data: ByteArray, correctionLevel: ErrorCorrectionLevel): QrCodeInfo {
+fun QrCode.Companion.encodeBinary(data: ByteArray, correctionLevel: ErrorCorrectionLevel): QrCodeInfo {
     val seg = makeBytes(data)
     return encodeSegments(listOf(seg), correctionLevel)
 }

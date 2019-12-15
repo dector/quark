@@ -5,6 +5,8 @@ interface QrCode {
     val version: Int
 
     operator fun get(x: Int, y: Int): Boolean
+
+    companion object
 }
 
 // [21, 177]
