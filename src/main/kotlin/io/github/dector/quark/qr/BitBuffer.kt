@@ -31,7 +31,7 @@ import java.util.BitSet
 
 interface BitBuffer {
 
-    val bitLength: Int
+    val size: Int
 
     fun getBit(index: Int): Int
     operator fun get(index: Int): Boolean
@@ -52,21 +52,19 @@ interface MutableBitBuffer : BitBuffer {
 /**
  * An appendable sequence of bits (0s and 1s). Mainly used by [QrSegment].
  */
-class RealBitBuffer(
+class RealBitBuffer constructor(
     private val data: BitSet = BitSet(),
-    bitLength: Int = 0  // Non-negative
+    size: UInt = 0U
 ) : MutableBitBuffer, Cloneable {
 
     /**
-     * Returns the length of this sequence, which is a non-negative value.
-     *
-     * @return the length of this sequence
+     * Length of the buffer
      */
-    override var bitLength: Int = bitLength
+    override var size: Int = size.toInt()
         private set
 
     init {
-        require(bitLength >= 0)
+        require(this.size >= 0)
     }
 
     /**
@@ -75,33 +73,33 @@ class RealBitBuffer(
      * @param index the index to get the bit at
      *
      * @return the bit at the specified index
-     *
-     * @throws IndexOutOfBoundsException if index &lt; 0 or index &#x2265; bitLength
      */
     override fun getBit(index: Int): Int {
-        if (index < 0 || index >= bitLength) throw IndexOutOfBoundsException()
+        require(index in 0..lastIndex)
         return if (data[index]) 1 else 0
     }
+
+    override fun get(index: Int) = data[index]
 
     /**
      * Appends the specified number of low-order bits of the specified value to this
      * buffer. Requires 0 &#x2264; len &#x2264; 31 and 0 &#x2264; val &lt; 2<sup>len</sup>.
      *
      * @param value the value to append
-     * @param len the number of low-order bits in the value to take
+     * @param count the number of low-order bits in the value to take
      *
      * @throws IllegalArgumentException if the value or number of bits is out of range
      * @throws IllegalStateException if appending the data would make bitLength exceed Integer.MAX_VALUE
      */
-    override fun appendBits(value: Int, len: Int) {
-        require(!(len < 0 || len > 31 || value ushr len != 0)) { "Value out of range" }
-        check(Int.MAX_VALUE - bitLength >= len) { "Maximum length reached" }
-        var i = len - 1
-        while (i >= 0) {
-            // Append bit by bit
-            data[bitLength] = getBit(value, i)
-            i--
-            bitLength++
+    override fun appendBits(value: Int, count: Int) {
+        require(count in 0..31) { "Value out of range" }
+        require(value ushr count == 0) { "Incorrect length" }
+
+        check(Int.MAX_VALUE - size >= count) { "Maximum length reached" }
+
+        ((count - 1) downTo 0).forEach { i ->
+            data[size] = value.parseBit(i)
+            size++
         }
     }
 
@@ -113,17 +111,15 @@ class RealBitBuffer(
      * @throws IllegalStateException if appending the data would make bitLength exceed Integer.MAX_VALUE
      */
     override fun appendData(bb: BitBuffer) {
-        check(Int.MAX_VALUE - bitLength >= bb.bitLength) { "Maximum length reached" }
+        check(Int.MAX_VALUE - size >= bb.size) { "Maximum length reached" }
         var i = 0
-        while (i < bb.bitLength) {
+        while (i < bb.size) {
             // Append bit by bit
-            data[bitLength] = bb[i]
+            data[size] = bb[i]
             i++
-            bitLength++
+            size++
         }
     }
-
-    override fun get(index: Int) = data[index]
 
     override fun copy(): BitBuffer = clone()
 
@@ -135,7 +131,7 @@ class RealBitBuffer(
     public override fun clone(): RealBitBuffer = try {
         RealBitBuffer(
             data = data.clone() as BitSet,
-            bitLength = bitLength
+            size = size.toUInt()
         )
     } catch (e: CloneNotSupportedException) {
         throw AssertionError(e)
@@ -143,3 +139,5 @@ class RealBitBuffer(
 }
 
 fun BitBuffer.Companion.create(): MutableBitBuffer = RealBitBuffer()
+
+val BitBuffer.lastIndex: Int get() = size - 1

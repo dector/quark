@@ -108,26 +108,26 @@ fun encodeSegments(segments: List<QrSegment>, correctionLevel: ErrorCorrectionLe
             appendData(segment.data)
         }
     }
-    assert(bb.bitLength == dataUsedBits)
+    assert(bb.size == dataUsedBits)
 
     // Add terminator and pad up to a byte if applicable
     val dataCapacityBits = getNumDataCodewords(version, ecl) * 8
-    assert(bb.bitLength <= dataCapacityBits)
+    assert(bb.size <= dataCapacityBits)
 
-    bb.appendBits(0, min(4, dataCapacityBits - bb.bitLength))
-    bb.appendBits(0, (8 - bb.bitLength % 8) % 8)
-    assert(bb.bitLength % 8 == 0)
+    bb.appendBits(0, min(4, dataCapacityBits - bb.size))
+    bb.appendBits(0, (8 - bb.size % 8) % 8)
+    assert(bb.size % 8 == 0)
 
     // Pad with alternating bytes until data capacity is reached
     var padByte = 0xEC
-    while (bb.bitLength < dataCapacityBits) {
+    while (bb.size < dataCapacityBits) {
         bb.appendBits(padByte, 8)
         padByte = padByte xor 0xEC xor 0x11
     }
 
     // Pack bits into bytes in big endian
-    val dataCodewords = ByteArray(bb.bitLength / 8)
-    for (i in 0 until bb.bitLength) {
+    val dataCodewords = ByteArray(bb.size / 8)
+    for (i in 0 until bb.size) {
         dataCodewords[i ushr 3] = (dataCodewords[i ushr 3].toInt() or bb.getBit(i) shl 7 - (i and 7)).toByte()
     }
 
@@ -206,7 +206,7 @@ fun getTotalBits(segments: List<QrSegment>, version: Int): Int {
 
         if (seg.numChars >= 1 shl ccbits) return -1 // The segment's length doesn't fit the field's bit width
 
-        result += 4L + ccbits + seg.data.bitLength
+        result += 4L + ccbits + seg.data.size
 
         if (result > Int.MAX_VALUE) return -1 // The sum will overflow an int type
     }
