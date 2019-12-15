@@ -368,8 +368,8 @@ private fun getPenaltyScore(canvas: SquareField): Int {
     }
 
     // Must be called at the end of a line (row or column) of modules. A helper function for getPenaltyScore().
-    fun finderPenaltyTerminateAndCount(currentRunColor: Boolean, currentRunLength: Int, runHistory: IntArray): Int {
-        var currentRunLength = currentRunLength
+    fun finderPenaltyTerminateAndCount(currentRunColor: Boolean, startRunLength: Int, runHistory: IntArray): Int {
+        var currentRunLength = startRunLength
         if (currentRunColor) { // Terminate black run
             finderPenaltyAddHistory(currentRunLength, runHistory)
             currentRunLength = 0
