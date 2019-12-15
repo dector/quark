@@ -45,7 +45,7 @@ class QrSegment(
     /**
      * The mode indicator of this segment. Not `null`.
      */
-    val mode: SegmentMode,
+    val mode: Mode,
     /**
      * The length of this segment's unencoded data. Measured in characters for
      * numeric/alphanumeric/kanji mode, bytes for byte mode, and 0 for ECI mode.
@@ -78,5 +78,24 @@ class QrSegment(
      */
     fun copyData(): BitBuffer {
         return data.clone() // Make defensive copy
+    }
+
+    /**
+     * Describes how a segment's data bits are interpreted.
+     */
+    enum class Mode(val modeBits: Int, private vararg val numBitsCharCount: Int) {
+        NUMERIC(0x1, 10, 12, 14),
+        ALPHANUMERIC(0x2, 9, 11, 13),
+        BYTE(0x4, 8, 16, 16),
+        KANJI(0x8, 8, 10, 12),
+        ECI(0x7, 0, 0, 0);
+
+        // Returns the bit width of the character count field for a segment in this mode
+        // in a QR Code at the given version number. The result is in the range [0, 16].
+        fun numCharCountBits(version: Int): Int {
+            require(version in QrConstants.MIN_VERSION..QrConstants.MAX_VERSION)
+
+            return numBitsCharCount[(version + 7) / 17]
+        }
     }
 }
