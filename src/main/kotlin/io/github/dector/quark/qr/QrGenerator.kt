@@ -81,34 +81,10 @@ private fun fillFunctionPattern(layer: Layer, config: QrGenerator.Config) {
     layer.drawFinderPattern()
     layer.drawAlignmentPattern(config.version)
 
-    val size = layer.size
-
-    // Draws two copies of the version bits (with its own error correction code),
-    // based on this object's version field, iff 7 <= version <= 40.
-    fun drawVersion() {
-        val version = config.version
-
-        if (version < 7) return
-
-        // Calculate error correction code and pack bits
-        var rem = version // version is uint6, in the range [7, 40]
-        for (i in 0..11) rem = rem shl 1 xor (rem ushr 11) * 0x1F25
-        val bits = version shl 12 or rem // uint18
-        assert(bits ushr 18 == 0)
-
-        // Draw two copies
-        for (i in 0..17) {
-            val bit = bits.parseBit(i)
-            val a = size - 11 + i % 3
-            val b = i / 3
-            layer.setAndProtect(a, b, bit)
-            layer.setAndProtect(b, a, bit)
-        }
-    }
-
     // Draw configuration data
     drawFormatBits(0, config.correctionLevel, layer) // Dummy mask value; overwritten later in the constructor
-    drawVersion()
+
+    layer.drawVersion(config.version)
 }
 
 private fun fillCodewords(layer: Layer, config: QrGenerator.Config, dataCodewords: ByteArray) {

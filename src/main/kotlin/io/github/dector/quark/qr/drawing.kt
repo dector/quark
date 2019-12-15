@@ -1,5 +1,6 @@
 package io.github.dector.quark.qr
 
+import io.github.dector.quark.utils.parseBit
 import io.github.dector.quark.utils.withGrid
 import kotlin.math.abs
 import kotlin.math.max
@@ -84,4 +85,37 @@ private fun countAlignmentPatternPositions(version: Int, size: Int): IntArray {
     }
 
     return result
+}
+
+// Version
+
+fun Layer.drawVersion(version: Int) {
+    if (version < 7) return
+
+    // uint18
+    val bits = run {
+        // Calculate error correction code and pack bits
+        // version is uint6, in the range [7, 40]
+        var rem = version
+
+        repeat(12) {
+            rem = rem shl 1 xor (rem ushr 11) * 0x1F25
+        }
+
+        version shl 12 or rem
+    }
+
+    check(bits ushr 18 == 0)
+
+    // Draws two copies of the version bits (with its own error correction code),
+    // based on this object's version field, iff 7 <= version <= 40.
+
+    (0..17).forEach { i ->
+        val bit = bits.parseBit(i)
+        val a = size - 11 + i % 3
+        val b = i / 3
+
+        setAndProtect(a, b, bit)
+        setAndProtect(b, a, bit)
+    }
 }
