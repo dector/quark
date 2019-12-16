@@ -138,7 +138,7 @@ fun encodeSegments(segments: List<QrSegment>, minimalCorrectionLevel: ErrorCorre
     }
 
     // Create the QR Code object
-    return QrGenerator(QrGenerator.Config(version, correctionLevel), mask).invoke(dataCodewords)
+    return QrGenerator(QrGenerator.Config(version, correctionLevel, mask)).invoke(dataCodewords)
 }
 
 private fun calculateVersion(segments: List<QrSegment>, minVersion: Int, maxVersion: Int, correctionLevel: ErrorCorrectionLevel): Int {

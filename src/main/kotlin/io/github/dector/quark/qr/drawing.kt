@@ -200,3 +200,24 @@ fun Layer.drawCodewords(data: ByteArray, version: Int) {
     }
     assert(i == data.size * 8)
 }
+
+// --- Mask
+
+fun Layer.applyMask(mask: Int) {
+    require(mask in 0..7) { "Mask value out of range" }
+
+    withGrid(0 until size, 0 until size) { x, y ->
+        val invert = when (mask) {
+            0 -> (x + y) % 2 == 0
+            1 -> y % 2 == 0
+            2 -> x % 3 == 0
+            3 -> (x + y) % 3 == 0
+            4 -> (x / 3 + y / 2) % 2 == 0
+            5 -> x * y % 2 + x * y % 3 == 0
+            6 -> (x * y % 2 + x * y % 3) % 2 == 0
+            7 -> ((x + y) % 2 + x * y % 3) % 2 == 0
+            else -> throw error("")
+        }
+        canvas[x, y] = canvas[x, y] xor (invert and !protectionMask[x, y])
+    }
+}

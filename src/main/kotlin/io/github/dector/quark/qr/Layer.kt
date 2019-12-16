@@ -9,6 +9,11 @@ data class Layer(
     }
 
     val size = canvas.size
+
+    fun copy() = Layer(
+        canvas = canvas.copy(),
+        protectionMask = protectionMask.copy()
+    )
 }
 
 operator fun Layer.set(x: Int, y: Int, isFilled: Boolean) {
