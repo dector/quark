@@ -31,9 +31,10 @@ import io.github.dector.quark.Constants.MAX_VERSION
 import io.github.dector.quark.Constants.MIN_VERSION
 import io.github.dector.quark.ErrorCorrectionLevel
 import io.github.dector.quark.QrCode
+import io.github.dector.quark.qr.QrTables.ECC_CODEWORDS_PER_BLOCK
+import io.github.dector.quark.qr.QrTables.NUM_ERROR_CORRECTION_BLOCKS
 import io.github.dector.quark.utils.parseBit
 import java.util.Arrays
-import java.util.Objects
 
 class QrGenerator(
     private val config: Config,
@@ -54,9 +55,9 @@ class QrGenerator(
     }
 
     operator fun invoke(dataCodewords: ByteArray): QrCode {
-        fillFunctionPattern(layer, config)
+        drawServicePatterns(layer, config)
 
-        fillCodewords(layer, config, dataCodewords)
+        drawData(layer, config, dataCodewords)
         selectedMask = detectAndFillMask(layer, requestedMask, config.correctionLevel)
 
         return getGenerated()
@@ -76,7 +77,7 @@ class QrGenerator(
     )
 }
 
-private fun fillFunctionPattern(layer: Layer, config: QrGenerator.Config) {
+private fun drawServicePatterns(layer: Layer, config: QrGenerator.Config) {
     layer.drawTimingPattern()
     layer.drawFinderPattern()
     layer.drawAlignmentPattern(config.version)
@@ -84,54 +85,21 @@ private fun fillFunctionPattern(layer: Layer, config: QrGenerator.Config) {
     layer.drawVersionData(config.version)
 }
 
-private fun fillCodewords(layer: Layer, config: QrGenerator.Config, dataCodewords: ByteArray) {
-    val allCodewords = addEccAndInterleave(config, dataCodewords)
+private fun drawData(layer: Layer, config: QrGenerator.Config, data: ByteArray) {
+    val codewords = data.supplementWithErrorCorrection(config.version, config.correctionLevel)
 
-    val size = layer.size
-
-    // Draws the given sequence of 8-bit codewords (data and error correction) onto the entire
-    // data area of this QR Code. Function modules need to be marked off before this is called.
-    fun drawCodewords(data: ByteArray) {
-        Objects.requireNonNull(data)
-        require(data.size == getNumRawDataModules(config.version) / 8)
-        var i = 0 // Bit index into the data
-
-        // Do the funny zigzag scan
-        var right = size - 1
-        while (right >= 1) {
-
-            // Index of right column in each column pair
-            if (right == 6) right = 5
-            for (vert in 0 until size) { // Vertical counter
-                for (j in 0..1) {
-                    val x = right - j // Actual x coordinate
-                    val upward = right + 1 and 2 == 0
-                    val y = if (upward) size - 1 - vert else vert // Actual y coordinate
-                    if (!layer.protectionMask[x, y] && i < data.size * 8) {
-                        layer.canvas[x, y] = data[i ushr 3].toInt().parseBit(7 - (i and 7))
-                        i++
-                    }
-                    // If this QR Code has any remainder bits (0 to 7), they were assigned as
-                    // 0/false/white by the constructor and are left unchanged by this method
-                }
-            }
-            right -= 2
-        }
-        assert(i == data.size * 8)
-    }
-
-    drawCodewords(allCodewords)
+    layer.drawCodewords(codewords, config.version)
 }
 
 // Returns a new byte string representing the given data with the appropriate error correction
 // codewords appended to it, based on this object's version and error correction level.
-private fun addEccAndInterleave(config: QrGenerator.Config, data: ByteArray): ByteArray {
-    require(data.size == getNumDataCodewords(config.version, config.correctionLevel))
+private fun ByteArray.supplementWithErrorCorrection(version: Int, correctionLevel: ErrorCorrectionLevel): ByteArray {
+    require(size == getNumDataCodewords(version, correctionLevel))
 
     // Calculate parameter numbers
-    val numBlocks = QrTables.NUM_ERROR_CORRECTION_BLOCKS[config.correctionLevel.ordinal][config.version].toInt()
-    val blockEccLen = QrTables.ECC_CODEWORDS_PER_BLOCK[config.correctionLevel.ordinal][config.version].toInt()
-    val rawCodewords = getNumRawDataModules(config.version) / 8
+    val numBlocks = NUM_ERROR_CORRECTION_BLOCKS[correctionLevel.ordinal][version].toInt()
+    val blockEccLen = ECC_CODEWORDS_PER_BLOCK[correctionLevel.ordinal][version].toInt()
+    val rawCodewords = getNumRawDataModules(version) / 8
     val numShortBlocks = numBlocks - rawCodewords % numBlocks
     val shortBlockLen = rawCodewords / numBlocks
 
@@ -140,32 +108,32 @@ private fun addEccAndInterleave(config: QrGenerator.Config, data: ByteArray): By
     val rsDiv = reedSolomonComputeDivisor(blockEccLen)
 
     run {
-        var i = 0
         var k = 0
-        while (i < numBlocks) {
-            val dat = Arrays.copyOfRange(data, k, k + shortBlockLen - blockEccLen + if (i < numShortBlocks) 0 else 1)
+        (0 until numBlocks).forEach { i ->
+            val dat = copyOfRange(k, k + shortBlockLen - blockEccLen + if (i < numShortBlocks) 0 else 1)
             k += dat.size
-            val block = Arrays.copyOf(dat, shortBlockLen + 1)
+
+            val block = dat.copyOf(shortBlockLen + 1)
             val ecc = reedSolomonComputeRemainder(dat, rsDiv)
+
             System.arraycopy(ecc, 0, block, block.size - blockEccLen, ecc.size)
             blocks[i] = block
-            i++
         }
     }
 
     // Interleave (not concatenate) the bytes from every block into a single sequence
     val result = ByteArray(rawCodewords)
-    var i = 0
     var k = 0
-    while (i < blocks[0]!!.size) {
-        for (j in blocks.indices) { // Skip the padding byte in short blocks
+    (blocks[0]!!.indices).forEach { i ->
+        for (j in blocks.indices) {
+            // Skip the padding byte in short blocks
             if (i != shortBlockLen - blockEccLen || j >= numShortBlocks) {
                 result[k] = blocks[j]!![i]
                 k++
             }
         }
-        i++
     }
+
     return result
 }
 

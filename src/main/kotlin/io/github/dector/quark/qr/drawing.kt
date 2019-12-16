@@ -167,3 +167,36 @@ fun Layer.drawFormatData(correctionLevel: ErrorCorrectionLevel, mask: Int = 0) {
 
     setAndProtect(8, size - 8, isFilled = true) // Always filled
 }
+
+// Codewords
+
+// Draws the given sequence of 8-bit codewords (data and error correction) onto the entire
+// data area of this QR Code. Function modules need to be marked off before this is called.
+fun Layer.drawCodewords(data: ByteArray, version: Int) {
+    require(data.size == getNumRawDataModules(version) / 8)
+
+    var i = 0 // Bit index into the data
+
+    // Do the funny zigzag scan
+    var right = size - 1
+    while (right >= 1) {
+
+        // Index of right column in each column pair
+        if (right == 6) right = 5
+        for (vert in 0 until size) { // Vertical counter
+            for (j in 0..1) {
+                val x = right - j // Actual x coordinate
+                val upward = right + 1 and 2 == 0
+                val y = if (upward) size - 1 - vert else vert // Actual y coordinate
+                if (!protectionMask[x, y] && i < data.size * 8) {
+                    canvas[x, y] = data[i ushr 3].toInt().parseBit(7 - (i and 7))
+                    i++
+                }
+                // If this QR Code has any remainder bits (0 to 7), they were assigned as
+                // 0/false/white by the constructor and are left unchanged by this method
+            }
+        }
+        right -= 2
+    }
+    assert(i == data.size * 8)
+}
