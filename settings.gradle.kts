@@ -2,7 +2,8 @@ rootProject.name = "quark"
 
 include(
     "quark-common",
-    "renderer-ascii"
+    "renderer-ascii",
+    "renderer-svg"
 )
 
 //include(

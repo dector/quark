@@ -10,6 +10,7 @@ dependencies {
 
     implementation(project(":quark-common"))
     implementation(project(":renderer-ascii"))
+    implementation(project(":renderer-svg"))
 
     testImplementation(Deps.kotlin_test)
 }
