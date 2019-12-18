@@ -10,8 +10,9 @@ dependencies {
 
     implementation(project(":quark-common"))
     implementation(project(":quark-generator"))
-    implementation(project(":renderer-ascii"))
-    implementation(project(":renderer-svg"))
+    implementation(project(":exporter-ascii"))
+    implementation(project(":exporter-svg"))
+    implementation(project(":exporter-image-jvm"))
 
     testImplementation(Deps.kotlin_test)
 }

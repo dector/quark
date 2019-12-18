@@ -3,11 +3,7 @@ rootProject.name = "quark"
 include(
     "quark-common",
     "quark-generator",
-    "renderer-ascii",
-    "renderer-svg"
+    "exporter-ascii",
+    "exporter-svg",
+    "exporter-image-jvm"
 )
-
-//include(
-//    ":lib1",
-//    ":lib2"
-//)

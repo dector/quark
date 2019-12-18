@@ -25,13 +25,23 @@
  *   Software.
  */
 
-package io.github.dector.quark.exporters.image
+package io.github.dector.quark.image
 
 import io.github.dector.quark.QrCode
 import io.github.dector.quark.size
 import io.github.dector.quark.sizeWithBorder
 import java.awt.Color
 import java.awt.image.BufferedImage
+import java.io.File
+import javax.imageio.ImageIO
+
+fun QrCode.toPngFile(file: File, scale: Int = 8, border: Int = 4) {
+    ImageIO.write(
+        ImageExporter.exportToImage(this, scale, border),
+        "png",
+        file
+    )
+}
 
 object ImageExporter {
 
@@ -50,7 +60,7 @@ object ImageExporter {
      * @throws IllegalArgumentException if the scale or border is out of range, or if
      * {scale, border, size} cause the image dimensions to exceed Integer.MAX_VALUE
      */
-    fun exportToImage(qr: QrCode, scale: Int = 8, border: Int): BufferedImage {
+    fun exportToImage(qr: QrCode, scale: Int = 8, border: Int = 4): BufferedImage {
         require(scale > 0) { "Scale should be positive" }
         require(border >= 0) { "Border count should be non-negative" }
         require(!(border > Int.MAX_VALUE / 2 || qr.size + border * 2L > Int.MAX_VALUE / scale)) { "Scale or border too large" }
