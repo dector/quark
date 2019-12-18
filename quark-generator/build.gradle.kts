@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 plugins {
     kotlin("multiplatform")
 }
@@ -9,7 +11,10 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 implementation(kotlin("stdlib-common"))
+
                 implementation(project(":quark-common"))
+                implementation(project(":renderer-ascii"))
+                implementation(project(":renderer-svg"))
             }
         }
 
@@ -21,8 +26,18 @@ kotlin {
     }
 }
 
-/*dependencies {
+tasks.withType<KotlinCompile> {
+    kotlinOptions.jvmTarget = "1.8"
+    kotlinOptions.freeCompilerArgs =
+        listOf("-Xexperimental=kotlin.ExperimentalUnsignedTypes")
+}
+
+/*
+dependencies {
     implementation(kotlin("stdlib-jdk8"))
 
+    implementation(project(":quark-common"))
+
     testImplementation(Deps.kotlin_test)
-}*/
+}
+*/

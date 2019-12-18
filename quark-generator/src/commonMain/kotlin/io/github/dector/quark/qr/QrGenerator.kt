@@ -115,7 +115,8 @@ private fun ByteArray.supplementWithErrorCorrection(version: Int, correctionLeve
             val block = dat.copyOf(shortBlockLen + 1)
             val ecc = reedSolomonComputeRemainder(dat, rsDiv)
 
-            System.arraycopy(ecc, 0, block, block.size - blockEccLen, ecc.size)
+            ecc.copyInto(block, block.size - blockEccLen)
+            //System.arraycopy(src = ecc, srcPos = 0, dest = block, destPos = block.size - blockEccLen, length = ecc.size)
             blocks[i] = block
         }
     }

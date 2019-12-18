@@ -9,6 +9,7 @@ dependencies {
     implementation(Deps.kotlin_coroutines)
 
     implementation(project(":quark-common"))
+    implementation(project(":quark-generator"))
     implementation(project(":renderer-ascii"))
     implementation(project(":renderer-svg"))
 
@@ -25,7 +26,8 @@ allprojects {
 
     tasks.withType<KotlinCompile> {
         kotlinOptions.jvmTarget = "1.8"
-        kotlinOptions.freeCompilerArgs = listOf("-Xexperimental=kotlin.ExperimentalUnsignedTypes")
+        kotlinOptions.freeCompilerArgs =
+            listOf("-Xexperimental=kotlin.ExperimentalUnsignedTypes")
     }
 }
 

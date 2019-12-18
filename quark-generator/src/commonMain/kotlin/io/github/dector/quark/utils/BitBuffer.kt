@@ -27,8 +27,6 @@
 
 package io.github.dector.quark.utils
 
-import java.util.BitSet
-
 interface BitBuffer {
 
     val size: Int
@@ -55,7 +53,7 @@ interface MutableBitBuffer : BitBuffer {
 class RealBitBuffer constructor(
     private val data: BitSet = BitSet(),
     size: UInt = 0U
-) : MutableBitBuffer, Cloneable {
+) : MutableBitBuffer {
 
     /**
      * Length of the buffer
@@ -119,21 +117,11 @@ class RealBitBuffer constructor(
         }
     }
 
-    override fun copy(): BitBuffer = clone()
-
-    /**
-     * Returns a new copy of this buffer.
-     *
-     * @return a new copy of this buffer
-     */
-    public override fun clone(): RealBitBuffer = try {
+    override fun copy(): BitBuffer =
         RealBitBuffer(
-            data = data.clone() as BitSet,
+            data = data.copy(),
             size = size.toUInt()
         )
-    } catch (e: CloneNotSupportedException) {
-        throw AssertionError(e)
-    }
 }
 
 fun BitBuffer.Companion.create(): MutableBitBuffer = RealBitBuffer()

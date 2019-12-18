@@ -158,9 +158,9 @@ private fun calculateVersion(segments: List<QrSegment>, minVersion: Int, maxVers
 
         // All versions in the range could not fit the given data
         if (version > maxVersion) {
-            val msg = if (dataUsedBits != -1) {
-                String.format("Data length = %d bits, Max capacity = %d bits", dataUsedBits, dataCapacityBits)
-            } else "Segment too long"
+            val msg = if (dataUsedBits != -1)
+                "Data length = $dataUsedBits bits, Max capacity = $dataCapacityBits bits"
+            else "Segment too long"
             throw DataTooLongException(msg)
         }
     }
