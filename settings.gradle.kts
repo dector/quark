@@ -5,5 +5,6 @@ include(
     "quark-generator",
     "exporter-ascii",
     "exporter-svg",
-    "exporter-image-jvm"
+    "exporter-image-jvm",
+    "application-cli"
 )
