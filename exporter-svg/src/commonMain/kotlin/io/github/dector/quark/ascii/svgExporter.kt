@@ -5,7 +5,7 @@ import io.github.dector.quark.size
 import io.github.dector.quark.sizeWithBorder
 import io.github.dector.quark.utils.withGrid
 
-fun QrCode.toSvg(border: Int = 4): String {
+fun QrCode.toSvg(border: Int = 4, includeHeader: Boolean = true, width: String = "", height: String = ""): String {
     val borderCount = if (border >= 0) border else 0
 
     val widthOrHeight = sizeWithBorder(borderCount)
@@ -24,18 +24,24 @@ fun QrCode.toSvg(border: Int = 4): String {
         }
     }
 
-    return """
+    val header = """
         <?xml version="1.0" encoding="UTF-8"?>
         <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
             "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+    """.trimIndent()
+
+    return """
+        ${if (includeHeader) header else ""}
         <svg xmlns="http://www.w3.org/2000/svg"
             version="1.1"
             viewBox="0 0 $widthOrHeight $widthOrHeight"
+            ${if (width.isNotEmpty()) "width=\"$width\"" else ""}
+            ${if (height.isNotEmpty()) "height=\"$height\"" else ""}
             stroke="none">
             
             <rect width="100%" height="100%" fill="#FFFFFF"/>
             <path d="$path" fill="#000000" />
         
         </svg>
-        """.trimIndent()
+        """.trimIndent().trim()
 }

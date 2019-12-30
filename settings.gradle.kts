@@ -6,5 +6,6 @@ include(
     "exporter-ascii",
     "exporter-svg",
     "exporter-image-jvm",
-    "application-cli"
+    "application-cli",
+    "application-server"
 )
